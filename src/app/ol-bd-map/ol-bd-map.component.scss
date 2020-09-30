@@ -1,0 +1,10 @@
+.map-container {
+  width: 800px;
+  height: 400px;
+  margin: 12px auto;
+}
+
+:host ::ng-deep .ol-mouse-position {
+  color: #000;
+  font-weight: 600;
+}
