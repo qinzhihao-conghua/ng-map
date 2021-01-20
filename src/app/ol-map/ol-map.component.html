@@ -1,2 +1,7 @@
 <div id="map" class="map-container"></div>
-<div class="map-container">经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
+<div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
+<button (click)="changeDrawing('Point')">点</button>
+<button (click)="changeDrawing('LineString')">线</button>
+<button (click)="changeDrawing('Polygon')">面</button>
+<button (click)="changeDrawing('Circle')">圆</button>
+<button (click)="changeDrawing('None')">无</button>
