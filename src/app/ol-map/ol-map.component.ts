@@ -18,6 +18,9 @@ import Feature from 'ol/Feature';
 import { easeOut } from 'ol/easing';
 import { getVectorContext } from 'ol/render';
 import { unByKey } from 'ol/Observable';
+import LineString from 'ol/geom/LineString';
+import Polygon from 'ol/geom/Polygon';
+import { Circle as CircleGemo } from 'ol/geom';
 
 @Component({
   selector: 'app-ol-map',
@@ -223,17 +226,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
 
   // 自定义动画
   // https://openlayers.org/en/latest/examples/feature-animation.html
-  addPoint(points?: Array<any>) {
-    const features = [];
-    this.points.forEach(item => {
-      features.push(new Feature(new Point(item)));
-    });
-    this.source.on('addfeature', (e) => {
-      this.addAnimate(e.feature);
-    });
-    this.source.addFeatures(features);
-  }
-
+  // 水纹动画
   addAnimate(feature) {
     let start = new Date().getTime();
     const duration = 3000;
@@ -281,6 +274,75 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       // tell OpenLayers to continue postrender animation
       that.map.render();
     }
+  }
+  // 撒点
+  addPoint(points?: Array<any>) {
+    const features = [];
+    this.points.forEach(item => {
+      features.push(new Feature(new Point(item)));
+    });
+    this.source.on('addfeature', (e) => {
+      this.addAnimate(e.feature);
+    });
+    this.source.addFeatures(features);
+  }
+
+  // 撒线
+  showPolyline() {
+    const points = [
+      [12049917.226310018, 2609978.87970096],
+      [12055145.519161358, 2606768.524512983],
+      [12059640.016657794, 2611782.79228552],
+      [12064654.285013499, 2607899.792764871]
+    ];
+    const lineFeature = new Feature({ // 路线
+      geometry: new LineString(points),
+    });
+    // lineFeature.setId(fenceId)
+    // 将所有矢量图层添加进去
+    this.source.addFeature(lineFeature);
+  }
+  // 撒面
+  showPolygon() {
+    const points = [[
+      [12047838.13879076, 2611110.14736968],
+      [12048082.737631174, 2608450.139135257],
+      [12050956.769778064, 2608297.265078686],
+      [12051751.714405693, 2610804.399256539],
+      [12049489.178485086, 2612088.540398661],
+      [12047838.13879076, 2611110.14736968]
+    ]];
+    // 多边形的数据格式是[[[lng,lat],[lng,lat]……]]外围两个中括号
+    const polygonFeature = new Feature({ // 路线
+      geometry: new Polygon(points)
+
+    });
+    this.source.addFeature(polygonFeature);
+  }
+  // 撒圆
+  showCircle() {
+    const centerPoint = [12061321.63011373, 2611905.0925804796];
+    const radius: any = 2500;
+    const circleFeature = new Feature({
+      geometry: new CircleGemo(centerPoint, radius),
+    });
+    // 将所有矢量图层添加进去
+    this.source.addFeature(circleFeature);
+  }
+  // 撒正方形
+  showSquare() {
+    const points = [[
+      [12052913.558168698, 2609489.6820201334],
+      [12051445.967458889, 2612852.9124310184],
+      [12048082.737048004, 2611385.321721209],
+      [12049550.327757813, 2608022.091310324],
+      [12052913.558168698, 2609489.6820201334]
+    ]];
+    const polygonFeature = new Feature({ // 路线
+      geometry: new Polygon(points)
+
+    });
+    this.source.addFeature(polygonFeature);
   }
 
 }
