@@ -37,7 +37,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   coordinate: number[] = [];
 
   // 栅格图层
-  raster = new TileLayer({
+  tileLayer = new TileLayer({
     source: new OSM({
       attributions: 'xxxx股份有限公司'
     }),
@@ -75,11 +75,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // 绘制类型
   typeDraw = 'None';
   mapCenter = fromLonLat([108.316492, 22.818136]);
-  points = [
-    [12058417.02420523, 2611140.7222976275],
-    [12059854.039403923, 2608327.839423466],
-    [12064501.410956929, 2611935.6663420903]
-  ];
+  // 水纹动画keys
+  animateKeys = [];
 
   ngOnInit() {
   }
@@ -90,7 +87,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         // 鼠标移入显示坐标
         new MousePosition({ projection: 'EPSG:4326' })
       ]),
-      layers: [this.raster, this.vector],
+      layers: [this.tileLayer, this.vector],
       view: new View({
         center: this.mapCenter,
         zoom: 12,
@@ -207,9 +204,12 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     // 最好先解除select事件
     // this.map.removeInteraction(this.select);
     // 清空绘制的图层
-    // this.vector.getSource().clear();
     this.clearInteraction();
+    this.animateKeys.forEach(item => {
+      unByKey(item);
+    });
     this.source.clear();
+    this.map.render();
   }
 
   // 交互类型
@@ -228,13 +228,12 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // https://openlayers.org/en/latest/examples/feature-animation.html
   // 水纹动画
   addAnimate(feature) {
+    console.log('执行次数');
     let start = new Date().getTime();
     const duration = 3000;
     const that = this;
     // 进行地图水波渲染
-    this.raster.on('postrender', (event) => {
-      animate(event);
-    });
+    this.animateKeys.push(this.tileLayer.on('postrender', animate));
     function animate(event) {
       // 获取几何图形上下文
       const vectorContext = getVectorContext(event);
@@ -278,7 +277,12 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // 撒点
   addPoint(points?: Array<any>) {
     const features = [];
-    this.points.forEach(item => {
+    points = [
+      [12058417.02420523, 2611140.7222976275],
+      [12059854.039403923, 2608327.839423466],
+      [12064501.410956929, 2611935.6663420903]
+    ];
+    points.forEach(item => {
       features.push(new Feature(new Point(item)));
     });
     this.source.on('addfeature', (e) => {
