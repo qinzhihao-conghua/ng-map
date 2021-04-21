@@ -77,6 +77,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   mapCenter = fromLonLat([108.316492, 22.818136]);
   // 水纹动画keys
   animateKeys = [];
+  // 动画事件key
+  animateEventKey;
 
   ngOnInit() {
   }
@@ -202,12 +204,22 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // 清空图层
   clearLayer() {
     // 最好先解除select事件
-    // this.map.removeInteraction(this.select);
+    this.map.removeInteraction(this.select);
     // 清空绘制的图层
     this.clearInteraction();
+    // 清除水纹动画，但是会影响绘制单独的点
     this.animateKeys.forEach(item => {
       unByKey(item);
     });
+    // this.source.forEachFeature(item => {
+    //   this.source.removeFeature(item);
+    // });
+    // this.source = new VectorSource({ wrapX: false });
+    // this.map.addInteraction(this.modify);
+    // this.source.removeEventListener('addfeature', (e) => {
+    //   console.log(e);
+    // });
+    unByKey(this.animateEventKey);
     this.source.clear();
     this.map.render();
   }
@@ -228,7 +240,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // https://openlayers.org/en/latest/examples/feature-animation.html
   // 水纹动画
   addAnimate(feature) {
-    console.log('执行次数');
+    console.log('执行');
     let start = new Date().getTime();
     const duration = 3000;
     const that = this;
@@ -257,9 +269,9 @@ export class OlMapComponent implements OnInit, AfterViewInit {
             color: 'rgba(255, 0, 0, ' + opacity + ')',
             width: 0.25 + opacity,
           }),
-          // fill: new Fill({
-          //   color: 'rgba(255, 0, 0, 0.5)',
-          // }),
+          fill: new Fill({
+            color: 'rgba(255, 255, 255, 0.5)',
+          }),
         }),
       });
       // 给几何图形添加样式
@@ -285,10 +297,18 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     points.forEach(item => {
       features.push(new Feature(new Point(item)));
     });
-    this.source.on('addfeature', (e) => {
+    // source = new VectorSource({ wrapX: false });
+    this.animateEventKey = this.source.on('addfeature', (e) => {
       this.addAnimate(e.feature);
     });
+    // this.source.once('addfeature', (e) => {
+    //   this.addAnimate(e.feature);
+    // });
     this.source.addFeatures(features);
+    // 如何卸载这个addfeature？
+    // this.source.un('addfeature', (e) => {
+    //   console.log('卸载', this.animateEventKey);
+    // });
   }
 
   // 撒线
