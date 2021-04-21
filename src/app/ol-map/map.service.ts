@@ -1,39 +1,36 @@
+import { Injectable } from '@angular/core';
 import { Map, View } from 'ol';
-import { defaults } from 'ol/control';
-import Attribution from 'ol/control/Attribution';
-import MousePosition from 'ol/control/MousePosition';
-import { fromLonLat, toLonLat, transform } from 'ol/proj';
-import Point from 'ol/geom/Point';
-
-import { Circle as CircleStyle, Fill, Stroke, Style, Icon } from 'ol/style';
-import { Draw, Modify, Snap, Select } from 'ol/interaction';
-import { createBox, createRegularPolygon, DrawEvent } from 'ol/interaction/Draw';
-import { OSM, Vector as VectorSource } from 'ol/source';
-import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer';
-import { click, pointerMove, altKeyOnly } from 'ol/events/condition';
-
-import { AfterViewInit, Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { SelectEvent } from 'ol/interaction/Select';
+import { defaults, MousePosition } from 'ol/control';
+import { Coordinate } from 'ol/coordinate';
+import { altKeyOnly, click, pointerMove } from 'ol/events/condition';
+import Draw, { createBox, createRegularPolygon } from 'ol/interaction/Draw';
+import Modify from 'ol/interaction/Modify';
+import Select, { SelectEvent } from 'ol/interaction/Select';
+import Snap from 'ol/interaction/Snap';
+import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import OSM from 'ol/source/OSM';
+import VectorSource from 'ol/source/Vector';
+import CircleStyle from 'ol/style/Circle';
+import Fill from 'ol/style/Fill';
+import Stroke from 'ol/style/Stroke';
+import Style from 'ol/style/Style';
 import Feature from 'ol/Feature';
-import { easeOut } from 'ol/easing';
-import { getVectorContext } from 'ol/render';
-import { unByKey } from 'ol/Observable';
 import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
+import Point from 'ol/geom/Point';
+import { getVectorContext } from 'ol/render';
+import { easeOut } from 'ol/easing';
 import { Circle as CircleGemo } from 'ol/geom';
 
-@Component({
-  selector: 'app-ol-map',
-  templateUrl: './ol-map.component.html',
-  styleUrls: ['./ol-map.component.scss']
+@Injectable({
+  providedIn: 'root'
 })
-export class OlMapComponent implements OnInit, AfterViewInit {
+export class MapService {
 
   constructor() { }
 
-  @Output()
-  getCoordinate = new EventEmitter<number[]>();
-  map: Map;
+  private map: Map;
   coordinate: number[] = [];
 
   // 栅格图层
@@ -74,75 +71,110 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   snap: Snap;
   // 绘制类型
   typeDraw = 'None';
-  mapCenter = fromLonLat([108.316492, 22.818136]);
   // 水纹动画keys
   animateKeys = [];
   // 动画事件key
   animateEventKey;
 
-  // 要改变鼠标的样式，直接修改鼠标在目标元素上的cursor样式属性
-  // 修改以及吸附效果
-  // https://openlayers.org/en/latest/examples/snap.html
-
-  ngOnInit() {
-  }
-  ngAfterViewInit(): void {
+  /**
+   * 初始化地图
+   * @param targetId 地图容器id
+   * @param mapCenter 地图中心坐标
+   * @returns 返回初始化的地图，可用于对地图添加自定义
+   */
+  initMap(targetId: string, mapCenter: Coordinate): Map {
     this.map = new Map({
-      target: 'map',
+      target: targetId,
       controls: defaults().extend([
         // 鼠标移入显示坐标
         new MousePosition({ projection: 'EPSG:4326' })
       ]),
       layers: [this.tileLayer, this.vector],
       view: new View({
-        center: this.mapCenter,
+        center: mapCenter,
         zoom: 12,
         maxZoom: 20,
         minZoom: 6,
         projection: 'EPSG:3857'
       })
     });
-    this.map.on('singleclick', this.mapSingleclick.bind(this));
-    // 可编辑图层，加入这句才能进行编辑
-    this.map.addInteraction(this.modify);
+    return this.map;
   }
-  // 地图单击
-  mapSingleclick(event) {
-    // this.coordinate = transform(event.coordinate, 'EPSG:3857', 'EPSG:4326');
-    this.coordinate = event.coordinate;
-    this.getCoordinate.emit(this.coordinate);
+
+  /**
+   * 点击地图获取坐标
+   * @returns 坐标，数组类型
+   */
+  getCoordinateByClick() {
+    let coordinate: number[] = [];
+    this.map.on('singleclick', (event) => {
+      // coordinate = transform(event.coordinate, 'EPSG:3857', 'EPSG:4326');
+      coordinate = event.coordinate;
+    });
+    return coordinate;
   }
-  // 添加交互图层
-  // https://openlayers.org/en/latest/examples/draw-and-modify-features.html
+
+  /**
+   * 添加交互图层，参考：
+   * https://openlayers.org/en/latest/examples/draw-and-modify-features.html;
+   * https://openlayers.org/en/latest/examples/draw-shapes.html
+   * @param typeDraw 绘制图形类型
+   * @param rect 矩形类型
+   */
   addInteractions(typeDraw: any, rect?: string) {
     if (typeDraw !== 'None') {
-      // 矩形绘制地址
-      // https://openlayers.org/en/latest/examples/draw-shapes.html
       let geometryFunction;
       if (rect && rect === 'Square') {
         geometryFunction = createRegularPolygon(4);
       } else if (rect && rect === 'Box') {
         geometryFunction = createBox();
       }
+      // 不使用局部变量是因为最后要清除
       this.draw = new Draw({
         source: this.source,
         type: typeDraw,
         geometryFunction
       });
       this.map.addInteraction(this.draw);
-      // this.snap = new Snap({ source: this.source });
-      // this.map.addInteraction(this.snap);
+      this.snap = new Snap({ source: this.source });
+      this.map.addInteraction(this.snap);
       this.draw.on('drawend', (e) => {
         console.log('绘制结果', (e.feature.getGeometry() as any).getCoordinates());
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
-        this.clearInteraction();
+        // this.clearInteraction();
       });
       this.modify.on('modifyend', (e) => {
         console.log('修改结果', (e.features.item(0).getGeometry() as any).getCoordinates());
       });
     }
   }
-  // 选中图层，失去选中焦点也会触发
+
+  /**
+   * 绘制图形交互类型
+   * @param type 绘制图形的类型:None:无;Point:点;LineString:线;Polygon:面;Circle:圆;Point:点;
+   * @param rect 矩形类型，要绘制矩形，type请传入Circle。Square:正方形;Box:长方形
+   */
+  changeDrawing(type: string, rect?: string) {
+    this.clearInteraction();
+    this.addInteractions(type, rect);
+  }
+  /**
+   * 清除交互
+   */
+  clearInteraction() {
+    // 清除编辑样式
+    this.map.removeInteraction(this.draw);
+    // 未知作用
+    this.map.removeInteraction(this.snap);
+    // 清除绘制的图层
+    this.map.removeInteraction(this.select);
+  }
+
+  /**
+   * 选中图层，失去选中焦点也会触发
+   * @param clickType 操作类型
+   * @param callback 回调方法
+   */
   changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
     this.clearInteraction();
     // 删除前需要先将修改功能取消，否则出现吸附在边缘时进行删除时报错
@@ -180,7 +212,9 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       });
     }
   }
-  // 选中并删除图层
+  /**
+   * 点击删除图层
+   */
   selectLayer() {
     this.changeInteraction('singleclick', (e) => {
       console.log('选中动作', e);
@@ -191,65 +225,23 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       }
     });
   }
-  // 删除图层，未实现高亮选中后点击删除
+  /**
+   * 点击删除图层，未实现高亮选中后点击删除
+   */
   deleteLayer() {
     this.changeInteraction('pointermove', (e) => {
       const select = e;
-      console.log('移入', e);
+      console.log('移入，没有实现点击', e);
       // this.selectLayer();
       const taget = e.target as Select;
-      this.map.addInteraction(taget);
-      taget.on('propertychange', (el: SelectEvent) => {
-        console.log('点击', el);
-      });
-      // if (e.selected.length > 0) {
-      //   this.source.removeFeature(e.selected[0]);
-      //   // this.map.removeInteraction(this.select);
-      //   this.select.getFeatures().remove(e.selected[0]);
-      // }
     });
   }
-  // 清空图层
-  clearLayer() {
-    // 最好先解除select事件
-    this.map.removeInteraction(this.select);
-    // 清空绘制的图层
-    this.clearInteraction();
-    // 清除水纹动画，但是会影响绘制单独的点
-    this.animateKeys.forEach(item => {
-      unByKey(item);
-    });
-    // this.source.forEachFeature(item => {
-    //   this.source.removeFeature(item);
-    // });
-    // this.source = new VectorSource({ wrapX: false });
-    // this.map.addInteraction(this.modify);
-    // this.source.removeEventListener('addfeature', (e) => {
-    //   console.log(e);
-    // });
-    unByKey(this.animateEventKey);
-    this.source.clear();
-    this.map.render();
-  }
 
-  // 交互类型
-  changeDrawing(type: string, rect?: string) {
-    this.clearInteraction();
-    this.addInteractions(type, rect);
-  }
-  // 清除交互
-  clearInteraction() {
-    // 清除编辑样式
-    this.map.removeInteraction(this.draw);
-    // 未知作用
-    this.map.removeInteraction(this.snap);
-    // 清除绘制的图层
-    this.map.removeInteraction(this.select);
-  }
-
-  // 自定义动画
-  // https://openlayers.org/en/latest/examples/feature-animation.html
-  // 水纹动画
+  /**
+   * 添加水纹动画参考：
+   * https://openlayers.org/en/latest/examples/feature-animation.html
+   * @param feature 要素
+   */
   addAnimate(feature) {
     console.log('执行');
     let start = new Date().getTime();
@@ -293,11 +285,13 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         // 重复动画
         start = frameState.time;
       }
-      // tell OpenLayers to continue postrender animation
       that.map.render();
     }
   }
-  // 撒点
+  /**
+   * 撒点
+   * @param points 点坐标
+   */
   addPoint(points?: Array<any>) {
     const features = [];
     points = [
@@ -308,21 +302,15 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     points.forEach(item => {
       features.push(new Feature(new Point(item)));
     });
-    // source = new VectorSource({ wrapX: false });
     this.animateEventKey = this.source.on('addfeature', (e) => {
       this.addAnimate(e.feature);
     });
-    // this.source.once('addfeature', (e) => {
-    //   this.addAnimate(e.feature);
-    // });
     this.source.addFeatures(features);
-    // 如何卸载这个addfeature？
-    // this.source.un('addfeature', (e) => {
-    //   console.log('卸载', this.animateEventKey);
-    // });
   }
 
-  // 撒线
+  /**
+   * 撒线
+   */
   showPolyline() {
     const points = [
       [12049917.226310018, 2609978.87970096],
@@ -333,11 +321,12 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     const lineFeature = new Feature({ // 路线
       geometry: new LineString(points),
     });
-    // lineFeature.setId(fenceId)
     // 将所有矢量图层添加进去
     this.source.addFeature(lineFeature);
   }
-  // 撒面
+  /**
+   * 撒多边形
+   */
   showPolygon() {
     const points = [[
       [12047838.13879076, 2611110.14736968],
@@ -354,7 +343,9 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     });
     this.source.addFeature(polygonFeature);
   }
-  // 撒圆
+  /**
+   * 撒圆
+   */
   showCircle() {
     const centerPoint = [12061321.63011373, 2611905.0925804796];
     const radius: any = 2500;
@@ -364,7 +355,9 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
   }
-  // 撒正方形
+  /**
+   * 撒正方形
+   */
   showSquare() {
     const points = [[
       [12052913.558168698, 2609489.6820201334],
@@ -375,7 +368,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     ]];
     const polygonFeature = new Feature({ // 路线
       geometry: new Polygon(points)
-
     });
     this.source.addFeature(polygonFeature);
   }
