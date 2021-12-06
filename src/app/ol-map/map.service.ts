@@ -21,7 +21,7 @@ import Polygon from 'ol/geom/Polygon';
 import Point from 'ol/geom/Point';
 import { getVectorContext } from 'ol/render';
 import { easeOut } from 'ol/easing';
-import { Circle as CircleGemo } from 'ol/geom';
+import { Circle as CircleGemo, Geometry } from 'ol/geom';
 
 @Injectable({
   providedIn: 'root'
@@ -200,12 +200,6 @@ export class MapService {
     if (this.select !== null) {
       this.map.addInteraction(this.select);
       this.select.on('select', (e: SelectEvent) => {
-        const featureslen = e.target.getFeatures().getLength();
-        const selected = e.selected.length;
-        const deselected = e.deselected.length;
-        // this.map.removeLayer(e);
-        // console.log('选中的图层', e);
-        // console.log('要素个数', featureslen, '选中个数', selected, '删除选中个数', deselected);
         if (callback) {
           callback(e);
         }
@@ -242,7 +236,7 @@ export class MapService {
    * https://openlayers.org/en/latest/examples/feature-animation.html
    * @param feature 要素
    */
-  addAnimate(feature) {
+  addAnimate(feature: Feature<Geometry>) {
     console.log('执行');
     let start = new Date().getTime();
     const duration = 3000;
@@ -371,5 +365,18 @@ export class MapService {
     });
     this.source.addFeature(polygonFeature);
   }
+
+  // 编辑图层
+  editLayer(){
+    let select=new Select();
+    let modify=new Modify({
+      features:select.getFeatures()
+    });
+    this.map.addInteraction(select);
+    this.map.addInteraction(modify);
+    modify.on('modifyend',(e)=>{
+      console.log('编辑结果',e);
+    })
+  } 
 
 }
