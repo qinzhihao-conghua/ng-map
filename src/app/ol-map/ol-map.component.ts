@@ -140,9 +140,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         this.clearInteraction();
       });
-      // this.modify.on('modifyend', (e) => {
-      //   console.log('修改结果', e);
-      // });
     }
   }
   // 选中图层，失去选中焦点也会触发
