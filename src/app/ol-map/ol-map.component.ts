@@ -117,8 +117,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // https://openlayers.org/en/latest/examples/draw-and-modify-features.html
   addInteractions(typeDraw: any, rect?: string) {
     if (typeDraw !== 'None') {
-      this.source.removeEventListener('addfeature',(e)=>{console.log('111');})
-    this.source.un('addfeature',(e)=>{console.log('111');});
+      this.source.removeEventListener('addfeature', (e) => { console.log('111'); });
+      this.source.un('addfeature', (e) => { console.log('111'); });
       // 矩形绘制地址
       // https://openlayers.org/en/latest/examples/draw-shapes.html
       let geometryFunction;
@@ -133,8 +133,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         geometryFunction
       });
       this.map.addInteraction(this.draw);
-      this.snap=new Snap({source:this.source});
-      this.modify=new Modify({source:this.source});
+      this.snap = new Snap({ source: this.source });
+      this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
         console.log('绘制结果', e.feature.getGeometry());
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
@@ -163,14 +163,14 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     if (this.select !== null) {
       this.map.addInteraction(this.select);
       this.select.on('select', (e: SelectEvent) => {
-        callback?callback(e):e;
+        callback ? callback(e) : e;
       });
     }
   }
   // 选中并删除图层
   selectLayer() {
     // 移入高亮
-    let select=new Select({ condition: pointerMove });
+    const select = new Select({ condition: pointerMove });
     this.map.addInteraction(select);
     this.changeInteraction('singleclick', (e) => {
       console.log('选中动作', e);
@@ -342,13 +342,13 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   }
 
   // 编辑
-  editLayer(){
+  editLayer() {
     // 移入高亮 为了一个高亮效果而已
-    this.highlightSelect=new Select({ condition: pointerMove });
+    this.highlightSelect = new Select({ condition: pointerMove });
     this.map.addInteraction(this.highlightSelect);
     this.map.addInteraction(this.modify);
-    this.modify.on('modifyend',e=>{
-      console.log('编辑结果',e);
+    this.modify.on('modifyend', e => {
+      console.log('编辑结果', e);
     })
   }
 
