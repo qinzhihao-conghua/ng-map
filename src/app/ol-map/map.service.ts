@@ -61,6 +61,7 @@ export class MapService {
     }),
   });
 
+  highlightSelect: Select;
   // 选中要修改的图层condition默认是单击
   select: Select;
   // 修改
@@ -367,16 +368,14 @@ export class MapService {
   }
 
   // 编辑图层
-  editLayer(){
-    let select=new Select();
-    let modify=new Modify({
-      features:select.getFeatures()
+  editLayer() {
+    // 移入高亮 为了一个高亮效果而已
+    this.highlightSelect = new Select({ condition: pointerMove });
+    this.map.addInteraction(this.highlightSelect);
+    this.map.addInteraction(this.modify);
+    this.modify.on('modifyend', e => {
+      console.log('编辑结果', e);
     });
-    this.map.addInteraction(select);
-    this.map.addInteraction(modify);
-    modify.on('modifyend',(e)=>{
-      console.log('编辑结果',e);
-    })
-  } 
+  }
 
 }
