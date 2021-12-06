@@ -163,6 +163,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     if (this.select !== null) {
       this.map.addInteraction(this.select);
       this.select.on('select', (e: SelectEvent) => {
+        // tslint:disable-next-line: no-unused-expression
         callback ? callback(e) : e;
       });
     }
@@ -217,9 +218,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     console.log('执行');
     let start = new Date().getTime();
     const duration = 3000;
-    const that = this;
     // 进行地图水波渲染
-    this.animateKeys.push(this.tileLayer.on('postrender', animate));
+    this.animateKeys.push(this.tileLayer.on('postrender', animate.bind(this)));
     function animate(event) {
       // 获取几何图形上下文
       const vectorContext = getVectorContext(event);
@@ -257,7 +257,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         start = frameState.time;
       }
       // tell OpenLayers to continue postrender animation
-      that.map.render();
+      this.map.render();
     }
   }
   // 撒点
@@ -349,7 +349,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     this.map.addInteraction(this.modify);
     this.modify.on('modifyend', e => {
       console.log('编辑结果', e);
-    })
+    });
   }
 
 }
