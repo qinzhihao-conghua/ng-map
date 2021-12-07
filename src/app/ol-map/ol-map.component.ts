@@ -9,7 +9,7 @@ import { Circle as CircleStyle, Fill, Stroke, Style, Icon } from 'ol/style';
 import { Draw, Modify, Snap, Select } from 'ol/interaction';
 import { createBox, createRegularPolygon, DrawEvent } from 'ol/interaction/Draw';
 import { OSM, Vector as VectorSource } from 'ol/source';
-import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer';
+import { Tile as TileLayer, Vector, Vector as VectorLayer } from 'ol/layer';
 import { click, pointerMove, altKeyOnly } from 'ol/events/condition';
 
 import { AfterViewInit, Component, EventEmitter, OnInit, Output } from '@angular/core';
@@ -20,7 +20,8 @@ import { getVectorContext } from 'ol/render';
 import { unByKey } from 'ol/Observable';
 import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
-import { Circle as CircleGemo } from 'ol/geom';
+import { Circle as CircleGemo, Geometry } from 'ol/geom';
+import { GeoJSON } from 'ol/format';
 
 @Component({
   selector: 'app-ol-map',
@@ -58,10 +59,10 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       image: new CircleStyle({ // 作用于点标注
         radius: 7,
         fill: new Fill({
-          color: '#0000ff',
+          color: '#03a9f4',
         }),
-      }),
-    }),
+      })
+    })
   });
 
   highlightSelect: Select;
@@ -78,8 +79,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   mapCenter = fromLonLat([108.316492, 22.818136]);
   // 水纹动画keys
   animateKeys = [];
-  // 动画事件key
-  animateEventKey;
 
   // 要改变鼠标的样式，直接修改鼠标在目标元素上的cursor样式属性
   // 修改以及吸附效果
@@ -115,28 +114,30 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   }
   // 添加交互图层
   // https://openlayers.org/en/latest/examples/draw-and-modify-features.html
-  addInteractions(typeDraw: any, rect?: string) {
-    if (typeDraw !== 'None') {
-      this.source.removeEventListener('addfeature', (e) => { console.log('111'); });
-      this.source.un('addfeature', (e) => { console.log('111'); });
+  addInteractions(type: string | any) {
+    if (type !== 'None') {
+      let drawType = type;
       // 矩形绘制地址
       // https://openlayers.org/en/latest/examples/draw-shapes.html
       let geometryFunction;
-      if (rect && rect === 'Square') {
+      if (type === 'Square') {
+        drawType = 'Circle';
         geometryFunction = createRegularPolygon(4);
-      } else if (rect && rect === 'Box') {
+      } else if (type === 'Box') {
+        drawType = 'Circle';
         geometryFunction = createBox();
       }
       this.draw = new Draw({
         source: this.source,
-        type: typeDraw,
-        geometryFunction
+        type: drawType,
+        geometryFunction,
       });
       this.map.addInteraction(this.draw);
       this.snap = new Snap({ source: this.source });
       this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
-        console.log('绘制结果', e.feature.getGeometry());
+        const geoJSON = new GeoJSON().writeFeature(e.feature);
+        console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         this.clearInteraction();
       });
@@ -186,18 +187,15 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     // 解除编辑相关
     this.clearInteraction();
     // 清除水纹动画，但是会影响绘制单独的点
-    this.animateKeys.forEach(item => {
-      unByKey(item);
-    });
-    unByKey(this.animateEventKey);
+    unByKey(this.animateKeys);
     this.source.clear();
     this.map.render();
   }
 
   // 交互类型
-  changeDrawing(type: string, rect?: string) {
+  changeDrawing(type: string) {
     this.clearInteraction();
-    this.addInteractions(type, rect);
+    this.addInteractions(type);
   }
   // 清除交互
   clearInteraction() {
@@ -214,7 +212,7 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // 自定义动画
   // https://openlayers.org/en/latest/examples/feature-animation.html
   // 水纹动画
-  addAnimate(feature) {
+  addAnimate(feature: Feature<Geometry>) {
     console.log('执行');
     let start = new Date().getTime();
     const duration = 3000;
@@ -272,12 +270,14 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       features.push(new Feature(new Point(item)));
     });
     // 监听导致绘制点的时候也执行添加动画
-    this.animateEventKey = this.source.on('addfeature', (e) => {
+    const key = this.source.on('addfeature', (e) => {
       console.log('撒点');
       this.addAnimate(e.feature);
     });
     this.source.addFeatures(features);
     this.clearInteraction();
+    // 撒点完成之后解除事件绑定，放止在绘制其他图形时产生动画
+    unByKey(key);
   }
 
   // 撒线
