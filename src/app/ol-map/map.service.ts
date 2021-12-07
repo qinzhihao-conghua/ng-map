@@ -22,6 +22,8 @@ import Point from 'ol/geom/Point';
 import { getVectorContext } from 'ol/render';
 import { easeOut } from 'ol/easing';
 import { Circle as CircleGemo, Geometry } from 'ol/geom';
+import { unByKey } from 'ol/Observable';
+import { GeoJSON } from 'ol/format';
 
 @Injectable({
   providedIn: 'root'
@@ -55,10 +57,10 @@ export class MapService {
       image: new CircleStyle({ // 作用于点标注
         radius: 7,
         fill: new Fill({
-          color: '#0000ff',
+          color: '#03a9f4',
         }),
-      }),
-    }),
+      })
+    })
   });
 
   highlightSelect: Select;
@@ -74,8 +76,6 @@ export class MapService {
   typeDraw = 'None';
   // 水纹动画keys
   animateKeys = [];
-  // 动画事件key
-  animateEventKey;
 
   /**
    * 初始化地图
@@ -87,7 +87,6 @@ export class MapService {
     this.map = new Map({
       target: targetId,
       controls: defaults().extend([
-        // 鼠标移入显示坐标
         new MousePosition({ projection: 'EPSG:4326' })
       ]),
       layers: [this.tileLayer, this.vector],
@@ -109,7 +108,6 @@ export class MapService {
   getCoordinateByClick() {
     let coordinate: number[] = [];
     this.map.on('singleclick', (event) => {
-      // coordinate = transform(event.coordinate, 'EPSG:3857', 'EPSG:4326');
       coordinate = event.coordinate;
     });
     return coordinate;
@@ -122,30 +120,30 @@ export class MapService {
    * @param typeDraw 绘制图形类型
    * @param rect 矩形类型
    */
-  addInteractions(typeDraw: any, rect?: string) {
-    if (typeDraw !== 'None') {
+  addInteractions(type: string | any) {
+    if (type !== 'None') {
+      let drawType = type;
       let geometryFunction;
-      if (rect && rect === 'Square') {
+      if (type === 'Square') {
+        drawType = 'Circle';
         geometryFunction = createRegularPolygon(4);
-      } else if (rect && rect === 'Box') {
+      } else if (type === 'Box') {
+        drawType = 'Circle';
         geometryFunction = createBox();
       }
-      // 不使用局部变量是因为最后要清除
       this.draw = new Draw({
         source: this.source,
-        type: typeDraw,
-        geometryFunction
+        type: drawType,
+        geometryFunction,
       });
       this.map.addInteraction(this.draw);
       this.snap = new Snap({ source: this.source });
-      this.map.addInteraction(this.snap);
+      this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
-        console.log('绘制结果', (e.feature.getGeometry() as any).getCoordinates());
+        const geoJSON = new GeoJSON().writeFeature(e.feature);
+        console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
-        // this.clearInteraction();
-      });
-      this.modify.on('modifyend', (e) => {
-        console.log('修改结果', (e.features.item(0).getGeometry() as any).getCoordinates());
+        this.clearInteraction();
       });
     }
   }
@@ -153,11 +151,11 @@ export class MapService {
   /**
    * 绘制图形交互类型
    * @param type 绘制图形的类型:None:无;Point:点;LineString:线;Polygon:面;Circle:圆;Point:点;
-   * @param rect 矩形类型，要绘制矩形，type请传入Circle。Square:正方形;Box:长方形
+   * Square:正方形;Box:长方形
    */
-  changeDrawing(type: string, rect?: string) {
+  changeDrawing(type: string) {
     this.clearInteraction();
-    this.addInteractions(type, rect);
+    this.addInteractions(type);
   }
   /**
    * 清除交互
@@ -165,10 +163,12 @@ export class MapService {
   clearInteraction() {
     // 清除编辑样式
     this.map.removeInteraction(this.draw);
-    // 未知作用
+    this.map.removeInteraction(this.modify);
+    // 清除吸附效果
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
     this.map.removeInteraction(this.select);
+    this.map.removeInteraction(this.highlightSelect);
   }
 
   /**
@@ -178,11 +178,6 @@ export class MapService {
    */
   changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
     this.clearInteraction();
-    // 删除前需要先将修改功能取消，否则出现吸附在边缘时进行删除时报错
-    this.map.removeInteraction(this.modify);
-    if (this.select !== null) {
-      this.map.removeInteraction(this.select);
-    }
     if (clickType === 'singleclick') {
       this.select = new Select();
     } else if (clickType === 'click') {
@@ -201,9 +196,8 @@ export class MapService {
     if (this.select !== null) {
       this.map.addInteraction(this.select);
       this.select.on('select', (e: SelectEvent) => {
-        if (callback) {
-          callback(e);
-        }
+        // tslint:disable-next-line: no-unused-expression
+        callback ? callback(e) : e;
       });
     }
   }
@@ -211,6 +205,9 @@ export class MapService {
    * 点击删除图层
    */
   selectLayer() {
+    // 移入高亮
+    const select = new Select({ condition: pointerMove });
+    this.map.addInteraction(select);
     this.changeInteraction('singleclick', (e) => {
       console.log('选中动作', e);
       if (e.selected.length > 0) {
@@ -220,17 +217,6 @@ export class MapService {
       }
     });
   }
-  /**
-   * 点击删除图层，未实现高亮选中后点击删除
-   */
-  deleteLayer() {
-    this.changeInteraction('pointermove', (e) => {
-      const select = e;
-      console.log('移入，没有实现点击', e);
-      // this.selectLayer();
-      const taget = e.target as Select;
-    });
-  }
 
   /**
    * 添加水纹动画参考：
@@ -238,7 +224,6 @@ export class MapService {
    * @param feature 要素
    */
   addAnimate(feature: Feature<Geometry>) {
-    console.log('执行');
     let start = new Date().getTime();
     const duration = 3000;
     const that = this;
@@ -297,10 +282,15 @@ export class MapService {
     points.forEach(item => {
       features.push(new Feature(new Point(item)));
     });
-    this.animateEventKey = this.source.on('addfeature', (e) => {
+    // 监听导致绘制点的时候也执行添加动画
+    const key = this.source.on('addfeature', (e) => {
+      console.log('撒点');
       this.addAnimate(e.feature);
     });
     this.source.addFeatures(features);
+    this.clearInteraction();
+    // 撒点完成之后解除事件绑定，放止在绘制其他图形时产生动画
+    unByKey(key);
   }
 
   /**
@@ -318,6 +308,7 @@ export class MapService {
     });
     // 将所有矢量图层添加进去
     this.source.addFeature(lineFeature);
+    this.clearInteraction();
   }
   /**
    * 撒多边形
@@ -337,6 +328,7 @@ export class MapService {
 
     });
     this.source.addFeature(polygonFeature);
+    this.clearInteraction();
   }
   /**
    * 撒圆
@@ -349,6 +341,7 @@ export class MapService {
     });
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
+    this.clearInteraction();
   }
   /**
    * 撒正方形
@@ -365,6 +358,7 @@ export class MapService {
       geometry: new Polygon(points)
     });
     this.source.addFeature(polygonFeature);
+    this.clearInteraction();
   }
 
   // 编辑图层

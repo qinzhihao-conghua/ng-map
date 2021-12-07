@@ -50,17 +50,17 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     source: this.source,
     style: new Style({
       fill: new Fill({
-        color: 'rgba(255, 255, 255, 0.5)',
+        color: 'rgba(255, 255, 255, 0.5)'
       }),
       stroke: new Stroke({
         color: '#ff0000',
-        width: 2,
+        width: 2
       }),
       image: new CircleStyle({ // 作用于点标注
         radius: 7,
         fill: new Fill({
           color: '#03a9f4',
-        }),
+        })
       })
     })
   });
@@ -335,7 +335,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     ]];
     const polygonFeature = new Feature({ // 路线
       geometry: new Polygon(points)
-
     });
     this.source.addFeature(polygonFeature);
     this.clearInteraction();
