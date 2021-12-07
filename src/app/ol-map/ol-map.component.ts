@@ -6,7 +6,7 @@ import { fromLonLat, toLonLat, transform } from 'ol/proj';
 import Point from 'ol/geom/Point';
 
 import { Circle as CircleStyle, Fill, Stroke, Style, Icon } from 'ol/style';
-import { Draw, Modify, Snap, Select } from 'ol/interaction';
+import { Draw, Modify, Snap, Select, DoubleClickZoom, Interaction } from 'ol/interaction';
 import { createBox, createRegularPolygon, DrawEvent } from 'ol/interaction/Draw';
 import { OSM, Vector as VectorSource } from 'ol/source';
 import { Tile as TileLayer, Vector, Vector as VectorLayer } from 'ol/layer';
@@ -22,6 +22,8 @@ import LineString from 'ol/geom/LineString';
 import Polygon from 'ol/geom/Polygon';
 import { Circle as CircleGemo, Geometry } from 'ol/geom';
 import { GeoJSON } from 'ol/format';
+import { defaults as interactionDefaults } from 'ol/interaction';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-ol-map',
@@ -30,12 +32,23 @@ import { GeoJSON } from 'ol/format';
 })
 export class OlMapComponent implements OnInit, AfterViewInit {
 
-  constructor() { }
+  constructor(
+    private http: HttpClient
+  ) { }
 
   @Output()
   getCoordinate = new EventEmitter<number[]>();
   map: Map;
   coordinate: number[] = [];
+
+  geojsonData: {
+    Points: Array<any>,
+    line: object,
+    Polygon: object,
+    Square: object,
+    Box: object,
+    Circle: object
+  };
 
   // 栅格图层
   tileLayer = new TileLayer({
@@ -74,9 +87,8 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   draw: Draw;
   // 鼠标捕捉，用户修改
   snap: Snap;
-  // 绘制类型
-  typeDraw = 'None';
-  mapCenter = fromLonLat([108.316492, 22.818136]);
+  // mapCenter = fromLonLat([108.316492, 22.818136]);
+  mapCenter = [108.316492, 22.818136];
   // 水纹动画keys
   animateKeys = [];
 
@@ -85,6 +97,9 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   // https://openlayers.org/en/latest/examples/snap.html
 
   ngOnInit() {
+    this.http.get('../../assets/geojson.json').subscribe(data => {
+      this.geojsonData = data as any;
+    });
   }
   ngAfterViewInit(): void {
     this.map = new Map({
@@ -93,13 +108,15 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         // 鼠标移入显示坐标
         new MousePosition({ projection: 'EPSG:4326' })
       ]),
+      // 取消双击放大
+      interactions: interactionDefaults({ doubleClickZoom: false }),
       layers: [this.tileLayer, this.vector],
       view: new View({
         center: this.mapCenter,
         zoom: 12,
         maxZoom: 20,
         minZoom: 6,
-        projection: 'EPSG:3857'
+        projection: 'EPSG:4326'
       })
     });
     this.map.on('singleclick', this.mapSingleclick.bind(this));
@@ -260,65 +277,73 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   }
   // 撒点
   addPoint(points?: Array<any>) {
-    const features = [];
-    points = [
-      [12058417.02420523, 2611140.7222976275],
-      [12059854.039403923, 2608327.839423466],
-      [12064501.410956929, 2611935.6663420903]
-    ];
-    points.forEach(item => {
-      features.push(new Feature(new Point(item)));
-    });
+    // const features = [];
+    // points = [
+    //   [12058417.02420523, 2611140.7222976275],
+    //   [12059854.039403923, 2608327.839423466],
+    //   [12064501.410956929, 2611935.6663420903]
+    // ];
+    // points.forEach(item => {
+    //   features.push(new Feature(new Point(item)));
+    // });
     // 监听导致绘制点的时候也执行添加动画
     const key = this.source.on('addfeature', (e) => {
-      console.log('撒点');
       this.addAnimate(e.feature);
     });
-    this.source.addFeatures(features);
+    const geoPoints = this.geojsonData.Points;
+    geoPoints.forEach(point => {
+      const geo = new GeoJSON().readFeatures(point);
+      this.source.addFeatures(geo);
+    });
     this.clearInteraction();
-    // 撒点完成之后解除事件绑定，放止在绘制其他图形时产生动画
+    // 撒点完成之后解除事件绑定，防止在绘制其他图形时产生动画
     unByKey(key);
   }
 
   // 撒线
   showPolyline() {
-    const points = [
-      [12049917.226310018, 2609978.87970096],
-      [12055145.519161358, 2606768.524512983],
-      [12059640.016657794, 2611782.79228552],
-      [12064654.285013499, 2607899.792764871]
-    ];
-    const lineFeature = new Feature({ // 路线
-      geometry: new LineString(points),
-    });
+    // const points = [
+    //   [12049917.226310018, 2609978.87970096],
+    //   [12055145.519161358, 2606768.524512983],
+    //   [12059640.016657794, 2611782.79228552],
+    //   [12064654.285013499, 2607899.792764871]
+    // ];
+    // const lineFeature = new Feature({ // 路线
+    //   geometry: new LineString(points),
+    // });
+    const line = new GeoJSON().readFeatures(this.geojsonData.line);
     // 将所有矢量图层添加进去
-    this.source.addFeature(lineFeature);
+    this.source.addFeatures(line);
     this.clearInteraction();
   }
   // 撒面
   showPolygon() {
-    const points = [[
-      [12047838.13879076, 2611110.14736968],
-      [12048082.737631174, 2608450.139135257],
-      [12050956.769778064, 2608297.265078686],
-      [12051751.714405693, 2610804.399256539],
-      [12049489.178485086, 2612088.540398661],
-      [12047838.13879076, 2611110.14736968]
-    ]];
-    // 多边形的数据格式是[[[lng,lat],[lng,lat]……]]外围两个中括号
-    const polygonFeature = new Feature({ // 路线
-      geometry: new Polygon(points)
-    });
-    this.source.addFeature(polygonFeature);
+    // const points = [[
+    //   [12047838.13879076, 2611110.14736968],
+    //   [12048082.737631174, 2608450.139135257],
+    //   [12050956.769778064, 2608297.265078686],
+    //   [12051751.714405693, 2610804.399256539],
+    //   [12049489.178485086, 2612088.540398661],
+    //   [12047838.13879076, 2611110.14736968]
+    // ]];
+    // // 多边形的数据格式是[[[lng,lat],[lng,lat]……]]外围两个中括号
+    // const polygonFeature = new Feature({ // 路线
+    //   geometry: new Polygon(points)
+    // });
+    const polygon = new GeoJSON().readFeature(this.geojsonData.Polygon);
+    this.source.addFeature(polygon);
     // 撒完关闭编辑状态
     this.clearInteraction();
   }
   // 撒圆
   showCircle() {
-    const centerPoint = [12061321.63011373, 2611905.0925804796];
+    const centerPoint = transform([108.41378967683895, 22.793760087092004], 'EPSG:4326', 'EPSG:3857');
+    // const centerPoint = [12061321.63011373, 2611905.0925804796];
     const radius: any = 2500;
     const circleFeature = new Feature({
-      geometry: new CircleGemo(centerPoint, radius),
+      // geometry: new CircleGemo(centerPoint, radius)
+      // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
+      geometry: new CircleGemo(centerPoint, radius).transform('EPSG:3857', 'EPSG:4326')
     });
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
@@ -326,17 +351,18 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   }
   // 撒正方形
   showSquare() {
-    const points = [[
-      [12052913.558168698, 2609489.6820201334],
-      [12051445.967458889, 2612852.9124310184],
-      [12048082.737048004, 2611385.321721209],
-      [12049550.327757813, 2608022.091310324],
-      [12052913.558168698, 2609489.6820201334]
-    ]];
-    const polygonFeature = new Feature({ // 路线
-      geometry: new Polygon(points)
-    });
-    this.source.addFeature(polygonFeature);
+    // const points = [[
+    //   [12052913.558168698, 2609489.6820201334],
+    //   [12051445.967458889, 2612852.9124310184],
+    //   [12048082.737048004, 2611385.321721209],
+    //   [12049550.327757813, 2608022.091310324],
+    //   [12052913.558168698, 2609489.6820201334]
+    // ]];
+    // const polygonFeature = new Feature({ // 路线
+    //   geometry: new Polygon(points)
+    // });
+    const square = new GeoJSON().readFeature(this.geojsonData.Square);
+    this.source.addFeature(square);
     this.clearInteraction();
   }
 

@@ -39,7 +39,7 @@ export class MapService {
   tileLayer = new TileLayer({
     source: new OSM({
       attributions: 'xxxx股份有限公司'
-    }),
+    })
   });
   // 矢量图层源
   source = new VectorSource({ wrapX: false });
@@ -48,17 +48,17 @@ export class MapService {
     source: this.source,
     style: new Style({
       fill: new Fill({
-        color: 'rgba(255, 255, 255, 0.5)',
+        color: 'rgba(255, 255, 255, 0.5)'
       }),
       stroke: new Stroke({
         color: '#ff0000',
-        width: 2,
+        width: 2
       }),
       image: new CircleStyle({ // 作用于点标注
         radius: 7,
         fill: new Fill({
           color: '#03a9f4',
-        }),
+        })
       })
     })
   });
@@ -95,7 +95,7 @@ export class MapService {
         zoom: 12,
         maxZoom: 20,
         minZoom: 6,
-        projection: 'EPSG:3857'
+        projection: 'EPSG:4326'
       })
     });
     return this.map;
@@ -150,8 +150,8 @@ export class MapService {
 
   /**
    * 绘制图形交互类型
-   * @param type 绘制图形的类型:None:无;Point:点;LineString:线;Polygon:面;Circle:圆;Point:点;
-   * Square:正方形;Box:长方形
+   * @param type 绘制图形的类型:None:无;Point:点;LineString:线;
+   * Polygon:面;Circle:圆;Square:正方形;Box:长方形
    */
   changeDrawing(type: string) {
     this.clearInteraction();
