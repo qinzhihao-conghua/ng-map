@@ -79,8 +79,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
   });
 
   highlightSelect: Select;
-  // 选中要修改的图层condition默认是单击
-  select: Select;
   // 修改
   modify = new Modify({ source: this.source });
   // 绘制对象
@@ -156,31 +154,32 @@ export class OlMapComponent implements OnInit, AfterViewInit {
         const geoJSON = new GeoJSON().writeFeature(e.feature);
         console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
-        this.clearInteraction();
+        // this.clearInteraction();
       });
     }
   }
   // 选中图层，失去选中焦点也会触发
   changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
     this.clearInteraction();
+    let select: Select;
     if (clickType === 'singleclick') {
-      this.select = new Select();
+      select = new Select();
     } else if (clickType === 'click') {
-      this.select = new Select({ condition: click });
+      select = new Select({ condition: click });
     } else if (clickType === 'pointermove') {
-      this.select = new Select({ condition: pointerMove });
+      select = new Select({ condition: pointerMove });
     } else if (clickType === 'altclick') {
-      this.select = new Select({
+      select = new Select({
         condition: (mapBrowserEvent) => {
           return click(mapBrowserEvent) && altKeyOnly(mapBrowserEvent);
         },
       });
     } else {
-      this.select = null;
+      select = null;
     }
-    if (this.select !== null) {
-      this.map.addInteraction(this.select);
-      this.select.on('select', (e: SelectEvent) => {
+    if (select !== null) {
+      this.map.addInteraction(select);
+      select.on('select', (e: SelectEvent) => {
         // tslint:disable-next-line: no-unused-expression
         callback ? callback(e) : e;
       });
@@ -195,7 +194,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
       console.log('选中动作', e);
       if (e.selected.length > 0) {
         this.vector.getSource().removeFeature(e.selected[0]);
-        this.select.getFeatures().remove(e.selected[0]);
       }
     });
   }
@@ -222,7 +220,6 @@ export class OlMapComponent implements OnInit, AfterViewInit {
     // 清除吸附效果
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
-    this.map.removeInteraction(this.select);
     this.map.removeInteraction(this.highlightSelect);
   }
 

@@ -24,6 +24,8 @@ import { easeOut } from 'ol/easing';
 import { Circle as CircleGemo, Geometry } from 'ol/geom';
 import { unByKey } from 'ol/Observable';
 import { GeoJSON } from 'ol/format';
+import { ProjectionLike } from 'ol/proj';
+import { ViewOptions } from 'ol/View';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +37,16 @@ export class MapService {
   private map: Map;
   coordinate: number[] = [];
 
-  // 栅格图层
+  /**
+   * 地图底图，不同的厂商可能使用的地图图源不同，根据情况选择不同的类
+   * new XYZ({url:'',projection:'EPSG:4326'})
+   * new TileLayer({url:'',projection:'EPSG:4326'})
+   * new TileWMS({url:'',projection:'EPSG:4326'})
+   * new TileArcGISRest({url:'',projection:'EPSG:4326'})
+   * new WMTS({url:'',projection:'EPSG:4326'})
+   * new TileImage({url:'',projection:'EPSG:4326'})
+   * new TileSuperMapRest({url:'',projection:'EPSG:4326'})
+   */
   tileLayer = new TileLayer({
     source: new OSM({
       attributions: 'xxxx股份有限公司'
@@ -64,8 +75,6 @@ export class MapService {
   });
 
   highlightSelect: Select;
-  // 选中要修改的图层condition默认是单击
-  select: Select;
   // 修改
   modify = new Modify({ source: this.source });
   // 绘制对象
@@ -80,23 +89,25 @@ export class MapService {
   /**
    * 初始化地图
    * @param targetId 地图容器id
-   * @param mapCenter 地图中心坐标
+   * @param ViewOptions 视图配至项，必须有坐标中心
    * @returns 返回初始化的地图，可用于对地图添加自定义
+   * @description
+   * ViewOptions:{
+   *     center: mapCenter,
+   *     zoom: 12,
+   *     maxZoom: 20,
+   *     minZoom: 6,
+   *     projection: 'EPSG:4326'
+   *   }
    */
-  initMap(targetId: string, mapCenter: Coordinate): Map {
+  initMap(targetId: string, viewOption: ViewOptions): Map {
     this.map = new Map({
       target: targetId,
       controls: defaults().extend([
         new MousePosition({ projection: 'EPSG:4326' })
       ]),
       layers: [this.tileLayer, this.vector],
-      view: new View({
-        center: mapCenter,
-        zoom: 12,
-        maxZoom: 20,
-        minZoom: 6,
-        projection: 'EPSG:4326'
-      })
+      view: new View(viewOption)
     });
     return this.map;
   }
@@ -105,7 +116,7 @@ export class MapService {
    * 点击地图获取坐标
    * @returns 坐标，数组类型
    */
-  getCoordinateByClick() {
+  getCoordinateByClick(): number[] {
     let coordinate: number[] = [];
     this.map.on('singleclick', (event) => {
       coordinate = event.coordinate;
@@ -117,8 +128,7 @@ export class MapService {
    * 添加交互图层，参考：
    * https://openlayers.org/en/latest/examples/draw-and-modify-features.html;
    * https://openlayers.org/en/latest/examples/draw-shapes.html
-   * @param typeDraw 绘制图形类型
-   * @param rect 矩形类型
+   * @param type 绘制图形类型
    */
   addInteractions(type: string | any) {
     if (type !== 'None') {
@@ -143,7 +153,7 @@ export class MapService {
         const geoJSON = new GeoJSON().writeFeature(e.feature);
         console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
-        this.clearInteraction();
+        // this.clearInteraction();
       });
     }
   }
@@ -167,7 +177,6 @@ export class MapService {
     // 清除吸附效果
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
-    this.map.removeInteraction(this.select);
     this.map.removeInteraction(this.highlightSelect);
   }
 
@@ -178,24 +187,25 @@ export class MapService {
    */
   changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
     this.clearInteraction();
+    let select: Select;
     if (clickType === 'singleclick') {
-      this.select = new Select();
+      select = new Select();
     } else if (clickType === 'click') {
-      this.select = new Select({ condition: click });
+      select = new Select({ condition: click });
     } else if (clickType === 'pointermove') {
-      this.select = new Select({ condition: pointerMove });
+      select = new Select({ condition: pointerMove });
     } else if (clickType === 'altclick') {
-      this.select = new Select({
+      select = new Select({
         condition: (mapBrowserEvent) => {
           return click(mapBrowserEvent) && altKeyOnly(mapBrowserEvent);
         },
       });
     } else {
-      this.select = null;
+      select = null;
     }
-    if (this.select !== null) {
-      this.map.addInteraction(this.select);
-      this.select.on('select', (e: SelectEvent) => {
+    if (select !== null) {
+      this.map.addInteraction(select);
+      select.on('select', (e: SelectEvent) => {
         // tslint:disable-next-line: no-unused-expression
         callback ? callback(e) : e;
       });
@@ -212,8 +222,6 @@ export class MapService {
       console.log('选中动作', e);
       if (e.selected.length > 0) {
         this.vector.getSource().removeFeature(e.selected[0]);
-        // this.map.removeInteraction(this.select);
-        this.select.getFeatures().remove(e.selected[0]);
       }
     });
   }
@@ -226,9 +234,8 @@ export class MapService {
   addAnimate(feature: Feature<Geometry>) {
     let start = new Date().getTime();
     const duration = 3000;
-    const that = this;
     // 进行地图水波渲染
-    this.animateKeys.push(this.tileLayer.on('postrender', animate));
+    this.animateKeys.push(this.tileLayer.on('postrender', animate.bind(this)));
     function animate(event) {
       // 获取几何图形上下文
       const vectorContext = getVectorContext(event);
@@ -265,7 +272,7 @@ export class MapService {
         // 重复动画
         start = frameState.time;
       }
-      that.map.render();
+      this.map.render();
     }
   }
   /**
