@@ -27,6 +27,7 @@ import { GeoJSON } from 'ol/format';
 import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
 import { Observable, Subject } from 'rxjs';
+import { Text } from 'ol/style';
 
 @Injectable()
 export class MapService {
@@ -34,8 +35,6 @@ export class MapService {
   constructor() { }
 
   private map: Map;
-  coordinate: number[] = [];
-
   /**
    * 地图底图，不同的厂商可能使用的地图图源不同，根据情况选择不同的类
    * new XYZ({url:'',projection:'EPSG:4326'})
@@ -69,11 +68,18 @@ export class MapService {
         fill: new Fill({
           color: '#03a9f4',
         })
-      })
+      }),
+      // text: new Text({
+      //   text: '测试',
+      //   scale: 2
+      // })
     })
   });
 
-  highlightSelect: Select;
+  editHighlight: Select;
+  deleteHighlight: Select;
+  deleteEventKey: any;
+  selectedLayer: Select;
   // 修改
   modify = new Modify({ source: this.source });
   // 绘制对象
@@ -116,12 +122,9 @@ export class MapService {
    * @returns 坐标，数组类型
    */
   getCoordinateByClick(): Observable<number[]> {
-    // let coordinate: number[] = [];
     const subject = new Subject<number[]>();
     this.map.on('singleclick', (event) => {
-      // coordinate = event.coordinate;
       subject.next(event.coordinate);
-      subject.complete();
     });
     return subject;
   }
@@ -160,21 +163,11 @@ export class MapService {
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         // this.clearInteraction();
         subject.next(geoJSON);
-        subject.complete();
       });
       return subject;
     }
   }
 
-  /**
-   * 绘制图形交互类型
-   * @param type 绘制图形的类型:None:无;Point:点;LineString:线;
-   * Polygon:面;Circle:圆;Square:正方形;Box:长方形
-   */
-  // changeDrawing(type: string) {
-  //   this.clearInteraction();
-  //   this.addInteractions(type);
-  // }
   /**
    * 清除交互
    */
@@ -185,7 +178,10 @@ export class MapService {
     // 清除吸附效果
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
-    this.map.removeInteraction(this.highlightSelect);
+    this.map.removeInteraction(this.editHighlight);
+    this.map.removeInteraction(this.deleteHighlight);
+    this.map.removeInteraction(this.selectedLayer);
+    unByKey(this.deleteEventKey);
   }
 
   /**
@@ -193,46 +189,47 @@ export class MapService {
    * @param clickType 操作类型
    * @param callback 回调方法
    */
-  changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
-    this.clearInteraction();
-    let select: Select;
-    if (clickType === 'singleclick') {
-      select = new Select();
-    } else if (clickType === 'click') {
-      select = new Select({ condition: click });
-    } else if (clickType === 'pointermove') {
-      select = new Select({ condition: pointerMove });
-    } else if (clickType === 'altclick') {
-      select = new Select({
-        condition: (mapBrowserEvent) => {
-          return click(mapBrowserEvent) && altKeyOnly(mapBrowserEvent);
-        },
-      });
-    } else {
-      select = null;
-    }
-    if (select !== null) {
-      this.map.addInteraction(select);
-      select.on('select', (e: SelectEvent) => {
-        // tslint:disable-next-line: no-unused-expression
-        callback ? callback(e) : e;
-      });
-    }
-  }
+  // changeInteraction(clickType: string, callback?: (e: SelectEvent) => void) {
+  //   this.clearInteraction();
+  //   let select: Select;
+  //   if (clickType === 'singleclick') {
+  //     select = new Select();
+  //   } else if (clickType === 'click') {
+  //     select = new Select({ condition: click });
+  //   } else if (clickType === 'pointermove') {
+  //     select = new Select({ condition: pointerMove });
+  //   } else if (clickType === 'altclick') {
+  //     select = new Select({
+  //       condition: (mapBrowserEvent) => {
+  //         return click(mapBrowserEvent) && altKeyOnly(mapBrowserEvent);
+  //       },
+  //     });
+  //   } else {
+  //     select = null;
+  //   }
+  //   if (select !== null) {
+  //     this.map.addInteraction(select);
+  //     select.on('select', (e: SelectEvent) => {
+  //       // tslint:disable-next-line: no-unused-expression
+  //       callback ? callback(e) : e;
+  //     });
+  //   }
+  // }
   /**
    * 点击删除图层
-   * 此处还未处理完善
    */
-  selectLayer(): Observable<SelectEvent> {
+  deleteLayer(): Observable<SelectEvent> {
+    this.clearInteraction();
     const subject = new Subject<SelectEvent>();
     // 移入高亮
-    const select = new Select({ condition: pointerMove });
-    this.map.addInteraction(select);
-    this.changeInteraction('singleclick', (e) => {
+    this.deleteHighlight = new Select({ condition: pointerMove });
+    this.selectedLayer = new Select();
+    this.map.addInteraction(this.deleteHighlight);
+    this.map.addInteraction(this.selectedLayer);
+    this.deleteEventKey = this.selectedLayer.on('select', (e: SelectEvent) => {
       if (e.selected.length > 0) {
-        this.vector.getSource().removeFeature(e.selected[0]);
+        this.source.removeFeature(e.selected[0]);
         subject.next(e);
-        subject.complete();
       }
     });
     return subject;
@@ -300,15 +297,9 @@ export class MapService {
   }
   /**
    * 撒点
-   * @param points 点坐标
+   * @param geoPoints 点坐标
    */
-  addPoint(geoPoints?: Array<any>) {
-    // const features = [];
-    // points = [
-    //   [12058417.02420523, 2611140.7222976275],
-    //   [12059854.039403923, 2608327.839423466],
-    //   [12064501.410956929, 2611935.6663420903]
-    // ];
+  showPoint(geoPoints?: Array<any>) {
     // 监听导致绘制点的时候也执行添加动画
     const key = this.source.on('addfeature', (e) => {
       this.addAnimate(e.feature);
@@ -318,7 +309,7 @@ export class MapService {
       this.source.addFeatures(geo);
     });
     this.clearInteraction();
-    // 撒点完成之后解除事件绑定，放止在绘制其他图形时产生动画
+    // 撒点完成之后解除事件绑定，防止在绘制其他图形时产生动画
     unByKey(key);
   }
 
@@ -327,7 +318,6 @@ export class MapService {
    */
   showPolyline(geoLine: object) {
     const line = new GeoJSON().readFeatures(geoLine);
-    // 将所有矢量图层添加进去
     this.source.addFeatures(line);
     this.clearInteraction();
   }
@@ -345,12 +335,9 @@ export class MapService {
    */
   showCircle(circleCenter: Array<any>, r: number) {
     const centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
-    // const centerPoint = [12061321.63011373, 2611905.0925804796];
-    const radius = r;
     const circleFeature = new Feature({
-      // geometry: new CircleGemo(centerPoint, radius)
       // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
-      geometry: new CircleGemo(centerPoint, radius).transform('EPSG:3857', 'EPSG:4326')
+      geometry: new CircleGemo(centerPoint, r).transform('EPSG:3857', 'EPSG:4326')
     });
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
@@ -371,12 +358,11 @@ export class MapService {
   editLayer(): Observable<ModifyEvent> {
     const subject = new Subject<ModifyEvent>();
     // 移入高亮 为了一个高亮效果而已
-    this.highlightSelect = new Select({ condition: pointerMove });
-    this.map.addInteraction(this.highlightSelect);
+    this.editHighlight = new Select({ condition: pointerMove });
+    this.map.addInteraction(this.editHighlight);
     this.map.addInteraction(this.modify);
     this.modify.on('modifyend', e => {
       subject.next(e);
-      subject.complete();
     });
     return subject;
   }

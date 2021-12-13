@@ -50,7 +50,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     });
   }
   deleteLayer() {
-    this.mapService.selectLayer().subscribe(data => {
+    this.mapService.deleteLayer().subscribe(data => {
       console.log('删除结果', data);
     });
   }
@@ -58,7 +58,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     this.mapService.clearLayer();
   }
   addPoint() {
-    this.mapService.addPoint(this.geojson.Points);
+    this.mapService.showPoint(this.geojson.Points);
   }
   showPolyline() {
     this.mapService.showPolyline(this.geojson.line);
