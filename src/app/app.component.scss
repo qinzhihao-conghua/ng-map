@@ -1,4 +1,10 @@
 .option {
-  width: 220px;
+  width: 100%;
   margin: 0 auto;
+  a{
+    padding: 12px;
+    margin-right: 12px;
+    background-color: aqua;
+    display: inline-block;
+  }
 }

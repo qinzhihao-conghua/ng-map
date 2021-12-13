@@ -24,12 +24,11 @@ import { easeOut } from 'ol/easing';
 import { Circle as CircleGemo, Geometry } from 'ol/geom';
 import { unByKey } from 'ol/Observable';
 import { GeoJSON } from 'ol/format';
-import { ProjectionLike } from 'ol/proj';
+import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
+import { Observable, Subject } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class MapService {
 
   constructor() { }
@@ -116,22 +115,29 @@ export class MapService {
    * 点击地图获取坐标
    * @returns 坐标，数组类型
    */
-  getCoordinateByClick(): number[] {
-    let coordinate: number[] = [];
+  getCoordinateByClick(): Observable<number[]> {
+    // let coordinate: number[] = [];
+    const subject = new Subject<number[]>();
     this.map.on('singleclick', (event) => {
-      coordinate = event.coordinate;
+      // coordinate = event.coordinate;
+      subject.next(event.coordinate);
+      subject.complete();
     });
-    return coordinate;
+    return subject;
   }
 
   /**
    * 添加交互图层，参考：
    * https://openlayers.org/en/latest/examples/draw-and-modify-features.html;
    * https://openlayers.org/en/latest/examples/draw-shapes.html
-   * @param type 绘制图形类型
+   * @param type 绘制图形类型:
+   * None:无;Point:点;LineString:线;
+   * Polygon:面;Circle:圆;Square:正方形;Box:长方形
    */
-  addInteractions(type: string | any) {
+  addInteractions(type: any): Observable<string> {
     if (type !== 'None') {
+      this.clearInteraction();
+      const subject = new Subject<string>();
       let drawType = type;
       let geometryFunction;
       if (type === 'Square') {
@@ -154,7 +160,10 @@ export class MapService {
         console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         // this.clearInteraction();
+        subject.next(geoJSON);
+        subject.complete();
       });
+      return subject;
     }
   }
 
@@ -163,10 +172,10 @@ export class MapService {
    * @param type 绘制图形的类型:None:无;Point:点;LineString:线;
    * Polygon:面;Circle:圆;Square:正方形;Box:长方形
    */
-  changeDrawing(type: string) {
-    this.clearInteraction();
-    this.addInteractions(type);
-  }
+  // changeDrawing(type: string) {
+  //   this.clearInteraction();
+  //   this.addInteractions(type);
+  // }
   /**
    * 清除交互
    */
@@ -225,6 +234,17 @@ export class MapService {
       }
     });
   }
+  /**
+   * 全部清空
+   */
+  clearLayer() {
+    // 解除编辑相关
+    this.clearInteraction();
+    // 清除水纹动画，但是会影响绘制单独的点
+    unByKey(this.animateKeys);
+    this.source.clear();
+    this.map.render();
+  }
 
   /**
    * 添加水纹动画参考：
@@ -279,22 +299,21 @@ export class MapService {
    * 撒点
    * @param points 点坐标
    */
-  addPoint(points?: Array<any>) {
-    const features = [];
-    points = [
-      [12058417.02420523, 2611140.7222976275],
-      [12059854.039403923, 2608327.839423466],
-      [12064501.410956929, 2611935.6663420903]
-    ];
-    points.forEach(item => {
-      features.push(new Feature(new Point(item)));
-    });
+  addPoint(geoPoints?: Array<any>) {
+    // const features = [];
+    // points = [
+    //   [12058417.02420523, 2611140.7222976275],
+    //   [12059854.039403923, 2608327.839423466],
+    //   [12064501.410956929, 2611935.6663420903]
+    // ];
     // 监听导致绘制点的时候也执行添加动画
     const key = this.source.on('addfeature', (e) => {
-      console.log('撒点');
       this.addAnimate(e.feature);
     });
-    this.source.addFeatures(features);
+    geoPoints.forEach(point => {
+      const geo = new GeoJSON().readFeatures(point);
+      this.source.addFeatures(geo);
+    });
     this.clearInteraction();
     // 撒点完成之后解除事件绑定，放止在绘制其他图形时产生动画
     unByKey(key);
@@ -303,48 +322,32 @@ export class MapService {
   /**
    * 撒线
    */
-  showPolyline() {
-    const points = [
-      [12049917.226310018, 2609978.87970096],
-      [12055145.519161358, 2606768.524512983],
-      [12059640.016657794, 2611782.79228552],
-      [12064654.285013499, 2607899.792764871]
-    ];
-    const lineFeature = new Feature({ // 路线
-      geometry: new LineString(points),
-    });
+  showPolyline(geoLine: object) {
+    const line = new GeoJSON().readFeatures(geoLine);
     // 将所有矢量图层添加进去
-    this.source.addFeature(lineFeature);
+    this.source.addFeatures(line);
     this.clearInteraction();
   }
   /**
    * 撒多边形
    */
-  showPolygon() {
-    const points = [[
-      [12047838.13879076, 2611110.14736968],
-      [12048082.737631174, 2608450.139135257],
-      [12050956.769778064, 2608297.265078686],
-      [12051751.714405693, 2610804.399256539],
-      [12049489.178485086, 2612088.540398661],
-      [12047838.13879076, 2611110.14736968]
-    ]];
-    // 多边形的数据格式是[[[lng,lat],[lng,lat]……]]外围两个中括号
-    const polygonFeature = new Feature({ // 路线
-      geometry: new Polygon(points)
-
-    });
-    this.source.addFeature(polygonFeature);
+  showPolygon(geoPolygon: object) {
+    const polygon = new GeoJSON().readFeature(geoPolygon);
+    this.source.addFeature(polygon);
     this.clearInteraction();
   }
   /**
    * 撒圆
+   * circleCenter暂定只能传经纬度
    */
-  showCircle() {
-    const centerPoint = [12061321.63011373, 2611905.0925804796];
-    const radius: any = 2500;
+  showCircle(circleCenter: Array<any>, r: number) {
+    const centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
+    // const centerPoint = [12061321.63011373, 2611905.0925804796];
+    const radius = r;
     const circleFeature = new Feature({
-      geometry: new CircleGemo(centerPoint, radius),
+      // geometry: new CircleGemo(centerPoint, radius)
+      // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
+      geometry: new CircleGemo(centerPoint, radius).transform('EPSG:3857', 'EPSG:4326')
     });
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
@@ -353,29 +356,25 @@ export class MapService {
   /**
    * 撒正方形
    */
-  showSquare() {
-    const points = [[
-      [12052913.558168698, 2609489.6820201334],
-      [12051445.967458889, 2612852.9124310184],
-      [12048082.737048004, 2611385.321721209],
-      [12049550.327757813, 2608022.091310324],
-      [12052913.558168698, 2609489.6820201334]
-    ]];
-    const polygonFeature = new Feature({ // 路线
-      geometry: new Polygon(points)
-    });
-    this.source.addFeature(polygonFeature);
+  showSquare(geoSquare: object) {
+    const square = new GeoJSON().readFeature(geoSquare);
+    this.source.addFeature(square);
     this.clearInteraction();
   }
 
-  // 编辑图层
+  /**
+   * 编辑图层
+   */
   editLayer() {
+    const subject = new Subject();
     // 移入高亮 为了一个高亮效果而已
     this.highlightSelect = new Select({ condition: pointerMove });
     this.map.addInteraction(this.highlightSelect);
     this.map.addInteraction(this.modify);
     this.modify.on('modifyend', e => {
       console.log('编辑结果', e);
+      subject.next(e);
+      subject.complete();
     });
   }
 
