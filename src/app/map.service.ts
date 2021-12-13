@@ -4,7 +4,7 @@ import { defaults, MousePosition } from 'ol/control';
 import { Coordinate } from 'ol/coordinate';
 import { altKeyOnly, click, pointerMove } from 'ol/events/condition';
 import Draw, { createBox, createRegularPolygon } from 'ol/interaction/Draw';
-import Modify from 'ol/interaction/Modify';
+import Modify, { ModifyEvent } from 'ol/interaction/Modify';
 import Select, { SelectEvent } from 'ol/interaction/Select';
 import Snap from 'ol/interaction/Snap';
 import TileLayer from 'ol/layer/Tile';
@@ -157,7 +157,6 @@ export class MapService {
       this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
         const geoJSON = new GeoJSON().writeFeature(e.feature);
-        console.log('绘制结果转成geojson', JSON.parse(geoJSON));
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         // this.clearInteraction();
         subject.next(geoJSON);
@@ -222,17 +221,21 @@ export class MapService {
   }
   /**
    * 点击删除图层
+   * 此处还未处理完善
    */
-  selectLayer() {
+  selectLayer(): Observable<SelectEvent> {
+    const subject = new Subject<SelectEvent>();
     // 移入高亮
     const select = new Select({ condition: pointerMove });
     this.map.addInteraction(select);
     this.changeInteraction('singleclick', (e) => {
-      console.log('选中动作', e);
       if (e.selected.length > 0) {
         this.vector.getSource().removeFeature(e.selected[0]);
+        subject.next(e);
+        subject.complete();
       }
     });
+    return subject;
   }
   /**
    * 全部清空
@@ -365,17 +368,17 @@ export class MapService {
   /**
    * 编辑图层
    */
-  editLayer() {
-    const subject = new Subject();
+  editLayer(): Observable<ModifyEvent> {
+    const subject = new Subject<ModifyEvent>();
     // 移入高亮 为了一个高亮效果而已
     this.highlightSelect = new Select({ condition: pointerMove });
     this.map.addInteraction(this.highlightSelect);
     this.map.addInteraction(this.modify);
     this.modify.on('modifyend', e => {
-      console.log('编辑结果', e);
       subject.next(e);
       subject.complete();
     });
+    return subject;
   }
 
 }

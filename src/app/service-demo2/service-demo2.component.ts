@@ -4,12 +4,12 @@ import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
-  selector: 'app-service-demo1',
-  templateUrl: './service-demo1.component.html',
-  styleUrls: ['./service-demo1.component.scss'],
+  selector: 'app-service-demo2',
+  templateUrl: './service-demo2.component.html',
+  styleUrls: ['./service-demo2.component.scss'],
   providers: [MapService]
 })
-export class ServiceDemo1Component implements OnInit, AfterViewInit {
+export class ServiceDemo2Component implements OnInit, AfterViewInit {
 
   constructor(
     private mapService: MapService,

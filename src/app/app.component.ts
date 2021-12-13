@@ -7,12 +7,4 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'ng-map-demo';
-  flag = false;
-  showMap(parm: string) {
-    if (parm === 'ol') {
-      this.flag = false;
-    } else if (parm === 'bd') {
-      this.flag = true;
-    }
-  }
 }
