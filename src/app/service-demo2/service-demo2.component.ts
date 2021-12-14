@@ -40,8 +40,8 @@ export class ServiceDemo2Component implements OnInit, AfterViewInit {
       projection: 'EPSG:4326'
     };
     this.mapService.initMap('demo1', viewOptions);
-    this.mapService.getCoordinateByClick().subscribe(data => {
-      this.coordinate = data;
+    this.mapService.clickEvent().subscribe(data => {
+      this.coordinate = data.coordinate;
     });
   }
   addInteractions(type: string) {

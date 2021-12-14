@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Map, View } from 'ol';
+import { Map, MapBrowserEvent, Overlay, View } from 'ol';
 import { defaults, MousePosition } from 'ol/control';
 import { Coordinate } from 'ol/coordinate';
 import { altKeyOnly, click, pointerMove } from 'ol/events/condition';
@@ -76,8 +76,7 @@ export class MapService {
     })
   });
 
-  editHighlight: Select;
-  deleteHighlight: Select;
+  highlight: Select;
   deleteEventKey: any;
   selectedLayer: Select;
   // 修改
@@ -121,10 +120,10 @@ export class MapService {
    * 点击地图获取坐标
    * @returns 坐标，数组类型
    */
-  getCoordinateByClick(): Observable<number[]> {
-    const subject = new Subject<number[]>();
+  clickEvent(): Observable<MapBrowserEvent> {
+    const subject = new Subject<MapBrowserEvent>();
     this.map.on('singleclick', (event) => {
-      subject.next(event.coordinate);
+      subject.next(event);
     });
     return subject;
   }
@@ -178,8 +177,7 @@ export class MapService {
     // 清除吸附效果
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
-    this.map.removeInteraction(this.editHighlight);
-    this.map.removeInteraction(this.deleteHighlight);
+    this.map.removeInteraction(this.highlight);
     this.map.removeInteraction(this.selectedLayer);
     unByKey(this.deleteEventKey);
   }
@@ -218,17 +216,19 @@ export class MapService {
   /**
    * 点击删除图层
    */
-  deleteLayer(): Observable<SelectEvent> {
+  deleteLayer(flag?: boolean): Observable<SelectEvent> {
     this.clearInteraction();
     const subject = new Subject<SelectEvent>();
     // 移入高亮
-    this.deleteHighlight = new Select({ condition: pointerMove });
+    this.highlight = new Select({ condition: pointerMove });
     this.selectedLayer = new Select();
-    this.map.addInteraction(this.deleteHighlight);
+    this.map.addInteraction(this.highlight);
     this.map.addInteraction(this.selectedLayer);
     this.deleteEventKey = this.selectedLayer.on('select', (e: SelectEvent) => {
       if (e.selected.length > 0) {
-        this.source.removeFeature(e.selected[0]);
+        if (!flag) {
+          this.source.removeFeature(e.selected[0]);
+        }
         subject.next(e);
       }
     });
@@ -358,13 +358,39 @@ export class MapService {
   editLayer(): Observable<ModifyEvent> {
     const subject = new Subject<ModifyEvent>();
     // 移入高亮 为了一个高亮效果而已
-    this.editHighlight = new Select({ condition: pointerMove });
-    this.map.addInteraction(this.editHighlight);
+    this.highlight = new Select({ condition: pointerMove });
+    this.map.addInteraction(this.highlight);
     this.map.addInteraction(this.modify);
     this.modify.on('modifyend', e => {
       subject.next(e);
     });
     return subject;
+  }
+
+  /**
+   * 展示popup
+   * @param container popup的dom容器
+   * @param coordinate 在那个坐标显示
+   * @param overlayId popup的id
+   */
+  showPopup(container: HTMLElement, coordinate: Array<number>, overlayId: string) {
+    const overlay = new Overlay({
+      element: container,
+      id: overlayId,
+      autoPan: true,
+      autoPanAnimation: {
+        duration: 250,
+      }
+    });
+    overlay.setPosition(coordinate);
+    this.map.addOverlay(overlay);
+  }
+  /**
+   * 关闭popup
+   * @param id popup容器的id
+   */
+  closeOverlay(id) {
+    this.map.getOverlayById(id).setPosition(undefined);
   }
 
 }

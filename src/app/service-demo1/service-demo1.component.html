@@ -1,4 +1,8 @@
 <div id="demo1" class="map-container"></div>
+<div id="popup" class="ol-popup">
+    <a id="popup-closer" (click)="closePopup()"  class="ol-popup-closer"></a>
+    <div id="popup-content"></div>
+</div>
 <div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
 <button (click)="addInteractions('Point')">点</button>
 <button (click)="addInteractions('LineString')">线</button>

@@ -2,6 +2,7 @@ import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { MapService } from '../map.service';
 import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
+import { Map } from 'ol';
 
 @Component({
   selector: 'app-service-demo1',
@@ -25,6 +26,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     Box: object,
     Circle: object
   };
+  map: Map;
 
   ngOnInit(): void {
     this.http.get('../../assets/geojson.json').subscribe(data => {
@@ -39,10 +41,31 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
       minZoom: 6,
       projection: 'EPSG:4326'
     };
-    this.mapService.initMap('demo1', viewOptions);
-    this.mapService.getCoordinateByClick().subscribe(data => {
-      this.coordinate = data;
+    this.map = this.mapService.initMap('demo1', viewOptions);
+    this.mapService.clickEvent().subscribe(data => {
+      this.coordinate = data.coordinate;
+      // 这种方式展示popup不是很理想，因为在绘制开始和结束的时候都会触发点击事件
+      // 比较理想的方式是通过select去获取，但是需要多处理一些
+      const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
+      console.log('点击', features);
+      if (features.length > 0) {
+        const dom = document.getElementById('popup');
+        dom.style.display = 'block';
+        const content = document.getElementById('popup-content');
+        content.innerHTML = `
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+          `;
+        this.mapService.showPopup(dom, data.coordinate, 'test');
+      }
     });
+    // this.mapService.getCoordinateByClick().subscribe(data => {
+    // });
+  }
+  closePopup() {
+    this.mapService.closeOverlay('test');
   }
   addInteractions(type: string) {
     this.mapService.addInteractions(type).subscribe(data => {
