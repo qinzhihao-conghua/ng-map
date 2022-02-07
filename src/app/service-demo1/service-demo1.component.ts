@@ -9,7 +9,7 @@ import { GeoJSON } from 'ol/format';
   selector: 'app-service-demo1',
   templateUrl: './service-demo1.component.html',
   styleUrls: ['./service-demo1.component.scss'],
-  providers: [MapService]
+  providers: [MapService]// 处理一个页面多个map，未测试
 })
 export class ServiceDemo1Component implements OnInit, AfterViewInit {
 
@@ -94,7 +94,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     this.mapService.showPolygon(this.geojson.Polygon);
   }
   showCircle() {
-    this.mapService.showCircle([108.41378967683895, 22.793760087092004], 2500);
+    this.mapService.showCircle([108.41378967683895, 22.793760087092004], 2500, 'EPSG:4326');
   }
   showSquare() {
     this.mapService.showSquare(this.geojson.Square);

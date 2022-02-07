@@ -54,7 +54,6 @@ export class MapService {
    * 矢量图层源，相关绘制操作在这个图层上进行
    */
   source = new VectorSource({ wrapX: false });
-  // 矢量图层，点线面圆
   /**
    * 矢量图层，基本的图形样式，默认点的样式是普通的小圆点
    * 如果要展示图标image的值改成new Icon({})
@@ -106,7 +105,7 @@ export class MapService {
    * @param targetId 地图容器id
    * @param ViewOptions 视图配至项，必须有坐标中心
    * @returns 返回初始化的地图，可用于对地图添加自定义
-   * @description
+   * @description viewOption的内容参数参考
    * ViewOptions:{
    *     center: mapCenter,
    *     zoom: 12,
@@ -327,6 +326,7 @@ export class MapService {
 
   /**
    * 撒线
+   * @param geoLine geojson线数据
    */
   showPolyline(geoLine: object) {
     const line = new GeoJSON().readFeatures(geoLine);
@@ -335,6 +335,7 @@ export class MapService {
   }
   /**
    * 撒多边形
+   * @param geoLine geojson多边形数据
    */
   showPolygon(geoPolygon: object) {
     const polygon = new GeoJSON().readFeature(geoPolygon);
@@ -344,19 +345,26 @@ export class MapService {
   /**
    * 撒圆
    * circleCenter暂定只能传经纬度
+   * @param geoLine geojson圆数据
+   * @param r 圆的半径，单位米
+   * @param dataEPSG 圆心数据属于什么坐标
    */
-  showCircle(circleCenter: Array<any>, r: number) {
-    const centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
-    const circleFeature = new Feature({
+  showCircle(circleCenter: Array<any>, r: number, dataEPSG: string) {
+    let centerPoint = circleCenter;
+    let geometry: CircleGemo = new CircleGemo(centerPoint, r);
+    if (dataEPSG === 'EPSG:4326') {
+      centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
       // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
-      geometry: new CircleGemo(centerPoint, r).transform('EPSG:3857', 'EPSG:4326')
-    });
+      geometry = new CircleGemo(centerPoint, r).transform('EPSG:3857', 'EPSG:4326');
+    }
+    const circleFeature = new Feature({ geometry });
     // 将所有矢量图层添加进去
     this.source.addFeature(circleFeature);
     this.clearInteraction();
   }
   /**
    * 撒正方形
+   * @param geoLine geojson正数据
    */
   showSquare(geoSquare: object) {
     const square = new GeoJSON().readFeature(geoSquare);
@@ -382,15 +390,15 @@ export class MapService {
   /**
    * 初始化popup的条件
    */
-  initPopup() {
-    this.layerForPopup = new Select();
-    this.map.addInteraction(this.layerForPopup);
-    this.layerForPopup.on('select', (e: SelectEvent) => {
-      if (e.selected.length > 0) {
-        // subject.next(e);
-      }
-    });
-  }
+  // initPopup() {
+  //   this.layerForPopup = new Select();
+  //   this.map.addInteraction(this.layerForPopup);
+  //   this.layerForPopup.on('select', (e: SelectEvent) => {
+  //     if (e.selected.length > 0) {
+  //       // subject.next(e);
+  //     }
+  //   });
+  // }
 
   /**
    * 展示popup
