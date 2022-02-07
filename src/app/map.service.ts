@@ -27,7 +27,7 @@ import { GeoJSON } from 'ol/format';
 import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
 import { Observable, Subject } from 'rxjs';
-import { Text } from 'ol/style';
+import { Icon, Text } from 'ol/style';
 
 @Injectable()
 export class MapService {
@@ -50,9 +50,15 @@ export class MapService {
       attributions: 'xxxx股份有限公司'
     })
   });
-  // 矢量图层源
+  /**
+   * 矢量图层源，相关绘制操作在这个图层上进行
+   */
   source = new VectorSource({ wrapX: false });
   // 矢量图层，点线面圆
+  /**
+   * 矢量图层，基本的图形样式，默认点的样式是普通的小圆点
+   * 如果要展示图标image的值改成new Icon({})
+   */
   vector = new VectorLayer({
     source: this.source,
     style: new Style({
@@ -69,6 +75,10 @@ export class MapService {
           color: '#03a9f4',
         })
       }),
+      // image: new Icon({
+      //   src: 'assets/location.jpg',
+      //   scale: .08// 图片过大，缩小到合适的大小
+      // })
       // text: new Text({
       //   text: '测试',
       //   scale: 2
@@ -78,7 +88,8 @@ export class MapService {
 
   highlight: Select;
   deleteEventKey: any;
-  selectedLayer: Select;
+  layerForDelete: Select;
+  layerForPopup: Select;
   // 修改
   modify = new Modify({ source: this.source });
   // 绘制对象
@@ -102,7 +113,7 @@ export class MapService {
    *     maxZoom: 20,
    *     minZoom: 6,
    *     projection: 'EPSG:4326'
-   *   }
+   * }
    */
   initMap(targetId: string, viewOption: ViewOptions): Map {
     this.map = new Map({
@@ -178,10 +189,11 @@ export class MapService {
     this.map.removeInteraction(this.snap);
     // 清除绘制的图层
     this.map.removeInteraction(this.highlight);
-    this.map.removeInteraction(this.selectedLayer);
+    this.map.removeInteraction(this.layerForDelete);
     unByKey(this.deleteEventKey);
   }
 
+  //#region 原来的鼠标事件
   /**
    * 选中图层，失去选中焦点也会触发
    * @param clickType 操作类型
@@ -213,22 +225,22 @@ export class MapService {
   //     });
   //   }
   // }
+  //#endregion
+
   /**
    * 点击删除图层
    */
-  deleteLayer(flag?: boolean): Observable<SelectEvent> {
+  deleteLayer(): Observable<SelectEvent> {
     this.clearInteraction();
     const subject = new Subject<SelectEvent>();
     // 移入高亮
     this.highlight = new Select({ condition: pointerMove });
-    this.selectedLayer = new Select();
+    this.layerForDelete = new Select();
     this.map.addInteraction(this.highlight);
-    this.map.addInteraction(this.selectedLayer);
-    this.deleteEventKey = this.selectedLayer.on('select', (e: SelectEvent) => {
+    this.map.addInteraction(this.layerForDelete);
+    this.deleteEventKey = this.layerForDelete.on('select', (e: SelectEvent) => {
       if (e.selected.length > 0) {
-        if (!flag) {
-          this.source.removeFeature(e.selected[0]);
-        }
+        this.source.removeFeature(e.selected[0]);
         subject.next(e);
       }
     });
@@ -365,6 +377,19 @@ export class MapService {
       subject.next(e);
     });
     return subject;
+  }
+
+  /**
+   * 初始化popup的条件
+   */
+  initPopup() {
+    this.layerForPopup = new Select();
+    this.map.addInteraction(this.layerForPopup);
+    this.layerForPopup.on('select', (e: SelectEvent) => {
+      if (e.selected.length > 0) {
+        // subject.next(e);
+      }
+    });
   }
 
   /**

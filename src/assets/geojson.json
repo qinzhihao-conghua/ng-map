@@ -9,7 +9,14 @@
               22.81078888730385
             ]
           },
-          "properties": null
+          "properties": {
+              "type":"Point",
+              "style":{
+                  "url":"assets/location.jpg",
+                  "size":18
+              }
+          },
+          "points":"108.24679748095704,22.81078888730385"
         },
         {
           "type": "Feature",

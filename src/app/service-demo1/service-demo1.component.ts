@@ -2,7 +2,8 @@ import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { MapService } from '../map.service';
 import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
-import { Map } from 'ol';
+import { Feature, Map } from 'ol';
+import { GeoJSON } from 'ol/format';
 
 @Component({
   selector: 'app-service-demo1',
@@ -31,6 +32,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
   ngOnInit(): void {
     this.http.get('../../assets/geojson.json').subscribe(data => {
       this.geojson = data as any;
+      console.log('geojson数据', data);
     });
   }
   ngAfterViewInit() {
@@ -49,6 +51,8 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
       const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
       console.log('点击', features);
       if (features.length > 0) {
+        console.log('features属性', features[0].getProperties());
+        console.log('转成geojson', new GeoJSON().writeFeature(features[0] as Feature));
         const dom = document.getElementById('popup');
         dom.style.display = 'block';
         const content = document.getElementById('popup-content');
