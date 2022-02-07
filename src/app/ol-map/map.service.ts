@@ -99,6 +99,7 @@ export class MapService {
   typeDraw = 'None';
   // 水纹动画keys
   animateKeys = [];
+  clickKey = [];
 
   /**
    * 初始化地图
@@ -132,10 +133,17 @@ export class MapService {
    */
   clickEvent(): Observable<MapBrowserEvent> {
     const subject = new Subject<MapBrowserEvent>();
-    this.map.on('singleclick', (event) => {
+    const key = this.map.on('singleclick', (event) => {
       subject.next(event);
     });
+    this.clickKey.push(key);
     return subject;
+  }
+  /**
+   * 关闭点击事件
+   */
+  closeClickEvent() {
+    unByKey(this.clickKey);
   }
 
   /**

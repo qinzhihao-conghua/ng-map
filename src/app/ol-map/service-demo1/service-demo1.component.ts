@@ -44,6 +44,9 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
       projection: 'EPSG:4326'
     };
     this.map = this.mapService.initMap('demo1', viewOptions);
+  }
+  openPopup() {
+    this.mapService.clearInteraction();
     this.mapService.clickEvent().subscribe(data => {
       this.coordinate = data.coordinate;
       // 这种方式展示popup不是很理想，因为在绘制开始和结束的时候都会触发点击事件
@@ -65,10 +68,9 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
         this.mapService.showPopup(dom, data.coordinate, 'test');
       }
     });
-    // this.mapService.getCoordinateByClick().subscribe(data => {
-    // });
   }
   closePopup() {
+    this.mapService.closeClickEvent();
     this.mapService.closeOverlay('test');
   }
   addInteractions(type: string) {

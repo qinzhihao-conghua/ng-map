@@ -1,17 +1,16 @@
-<div id="map" class="map-container"></div>
-<div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
-<button (click)="changeDrawing('Point')">点</button>
-<button (click)="changeDrawing('LineString')">线</button>
-<button (click)="changeDrawing('Polygon')">面</button>
-<button (click)="changeDrawing('Circle')">圆</button>
-<button (click)="changeDrawing('Square')">正方形</button>
-<button (click)="changeDrawing('Box')">长方形</button>
-<button (click)="selectLayer()">单击删除图层</button>
-<button (click)="clearLayer()">全部清空</button>
-<button (click)="addPoint()">撒点</button>
-<button (click)="showPolyline()">撒线</button>
-<button (click)="showPolygon()">撒面</button>
-<button (click)="showCircle()">撒圆</button>
-<button (click)="showSquare()">撒正方形</button>
-<button (click)="clearInteraction()">关闭编辑</button>
-<button (click)="editLayer()">编辑</button>
+<div class="main-container">
+    <ul class="left">
+        <li class="list-item">
+            <a [routerLink]="['./ol-map']">openlayer-未封装</a>
+        </li>
+        <li class="list-item">
+            <a [routerLink]="['./bd-map']">openlayer-百度</a>
+        </li>
+        <li class="list-item">
+            <a [routerLink]="['./demo']">service-demo</a>
+        </li>
+    </ul>
+    <div class="right">
+        <router-outlet></router-outlet>
+    </div>
+</div>
