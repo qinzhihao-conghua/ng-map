@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { MapService } from '../map.service';
+import { MapService } from '../../service/map.service';
 import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
 import { Feature, Map } from 'ol';
@@ -49,10 +49,9 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     this.mapService.clearInteraction();
     this.mapService.clickEvent().subscribe(data => {
       this.coordinate = data.coordinate;
-      // 这种方式展示popup不是很理想，因为在绘制开始和结束的时候都会触发点击事件
-      // 比较理想的方式是通过select去获取，但是需要多处理一些
+      // 这种方式展示popup不是很理想，比较理想的方式是通过select去获取，但是需要多处理一些
       const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
-      console.log('点击', features);
+      console.log('点击返回', features);
       if (features.length > 0) {
         console.log('features属性', features[0].getProperties());
         console.log('转成geojson', new GeoJSON().writeFeature(features[0] as Feature));
