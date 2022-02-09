@@ -1,0 +1,15 @@
+.main-container {
+  display: flex;
+
+  .left {
+    width: 220px;
+
+    .list-item {
+      padding: 16px;
+    }
+  }
+
+  .right {
+    flex: 1;
+  }
+}

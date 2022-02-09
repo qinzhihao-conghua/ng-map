@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
+import { TurfDemoComponent } from './turf-demo/turf-demo.component';
 import { TurfMapComponent } from './turf-map.component';
 
 
@@ -7,9 +8,10 @@ const routes: Routes = [
   {
     path: '',
     component: TurfMapComponent,
-    // children: [
-    //   { path: '', redirectTo: 'demo', pathMatch: 'full' },
-    // ]
+    children: [
+      { path: 'turf', component: TurfDemoComponent },
+      { path: '', redirectTo: 'turf', pathMatch: 'full' },
+    ]
   }
 ];
 
