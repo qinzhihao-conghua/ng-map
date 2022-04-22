@@ -28,6 +28,13 @@ import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
 import { Observable, Subject } from 'rxjs';
 import { Icon, Text } from 'ol/style';
+import { Observable } from './observable';
+import ImageLayer from 'ol/layer/Image';
+import XYZ from 'ol/source/XYZ';
+import TileWMS from 'ol/source/TileWMS';
+import TileArcGISRest from 'ol/source/TileArcGISRest';
+import WMTS from 'ol/source/WMTS';
+import TileImage from 'ol/source/TileImage';
 
 @Injectable()
 export class MapService {
@@ -125,6 +132,58 @@ export class MapService {
       view: new View(viewOption)
     });
     return this.map;
+  }
+
+  /**
+     * 生成图层Layer
+     * @param layerType 图层类型
+     * @param sourceType 图源类型
+     * @param sourceUrl 图源服务url
+     * @returns Layer
+     */
+  private createMapLayer(layerType: string, sourceType: string, sourceUrl: string) {
+    let layer = null;
+    let source = this.createTileSource(sourceType, sourceUrl);
+    switch (layerType) {
+      case 'Image':
+        layer = new ImageLayer({ source: source });
+        break;
+      case 'Tile':
+        layer = new TileLayer({ source: source });
+        break;
+      default:
+        console.error("[OpenlayersMap]:type of layer is undefined!");
+    }
+    return layer;
+  }
+  /**
+   * 根据不同的图源类型构建对应的Layer source
+   * @param sourceType 图源类型
+   * @param sourceUrl 图源服务url
+   * @returns 返回any防止ts报错
+   */
+  private createTileSource(sourceType: string, sourceUrl: string) {
+    var source_options: any = { url: sourceUrl };
+    var source: any = null;
+    if (sourceType === 'XYZ') {
+      source = new XYZ(source_options);
+    } else if (sourceType === 'TileWMS') {
+      source = new TileWMS(source_options);
+    } else if (sourceType === 'TileArcGISRest') {
+      source = new TileArcGISRest(source_options);
+    } else if (sourceType === 'WMTS') {
+      source = new WMTS(source_options);
+    } else if (sourceType === 'TileImage') {
+      source = new TileImage(source_options);
+    } else if (sourceType === 'OSM') {
+      source = new OSM();
+    } else if (sourceType === 'TileSuperMapRest') {
+      // TODO: 超图部分暂时先注释了，目前不支持echarts5
+      // source = new TileSuperMapRest(source_options);
+    } else {
+      console.error('unknow map source type!');
+    }
+    return source;
   }
 
   /**
