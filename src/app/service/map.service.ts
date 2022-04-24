@@ -219,12 +219,21 @@ export class MapService {
       const subject = new Subject<string>();
       let drawType = type;
       let geometryFunction;
+      let style = null;
       if (type === 'Square') {
         drawType = 'Circle';
         geometryFunction = createRegularPolygon(4);
       } else if (type === 'Box') {
         drawType = 'Circle';
         geometryFunction = createBox();
+      } else if (type === 'Point') {
+        style = new Style({
+          image: new Icon({
+            src: 'assets/location.png', // 
+            opacity: 0.8,
+            scale: 0.2
+          })
+        })
       }
       this.draw = new Draw({
         source: this.source,
@@ -235,6 +244,12 @@ export class MapService {
       this.snap = new Snap({ source: this.source });
       this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
+        if (type === 'Point') {
+          e.feature.setStyle(style);
+        }
+        if (!e.feature.getId()) {
+          e.feature.setId(Math.random());
+        }
         const geoJSON = new GeoJSON().writeFeature(e.feature);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         // this.clearInteraction();
