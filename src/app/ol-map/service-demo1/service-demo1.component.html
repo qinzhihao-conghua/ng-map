@@ -1,7 +1,7 @@
 <div id="demo1" class="map-container"></div>
 <div id="popup" class="ol-popup">
-    <a id="popup-closer" (click)="closePopup()"  class="ol-popup-closer"></a>
-    <div id="popup-content"></div>
+  <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer"></a>
+  <div id="popup-content"></div>
 </div>
 <div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
 <button (click)="addInteractions('Point')">点</button>
@@ -20,3 +20,12 @@
 <button (click)="clearInteraction()">关闭编辑/绘制</button>
 <button (click)="editLayer()">编辑</button>
 <button (click)="openPopup()">popup展示</button>
+
+
+<button (click)="showHeatMap()">热力图</button>
+<button (click)="closeHeatMap()">关闭热力图</button>
+<button (click)="showClusterMap()">聚合图</button>
+<button (click)="closeClusterMap()">关闭聚合图</button>
+<button (click)="markerAnimation()">轨迹图</button>
+<button (click)="changeAnimation()">{{ markText }}</button>
+<button (click)="mapClick()">地图点击事件</button>
