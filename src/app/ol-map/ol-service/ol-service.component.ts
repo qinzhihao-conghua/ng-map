@@ -1,20 +1,21 @@
-import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { MapService } from '../../service/map.service';
-import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
+import { Component, OnInit } from '@angular/core';
 import { Feature, Map } from 'ol';
+import { ViewOptions } from 'ol/View';
 import { GeoJSON } from 'ol/format';
+import { OlMapService } from 'src/app/service/ol-map-service';
+import Point from 'ol/geom/Point';
 
 @Component({
-  selector: 'app-service-demo1',
-  templateUrl: './service-demo1.component.html',
-  styleUrls: ['./service-demo1.component.scss'],
-  providers: [MapService]// 处理一个页面多个map，未测试
+  selector: 'app-ol-service',
+  templateUrl: './ol-service.component.html',
+  styleUrls: ['./ol-service.component.scss'],
+  providers: [OlMapService]
 })
-export class ServiceDemo1Component implements OnInit, AfterViewInit {
+export class OlServiceComponent implements OnInit {
 
   constructor(
-    private mapService: MapService,
+    private mapService: OlMapService,
     private http: HttpClient
   ) { }
 
@@ -25,9 +26,16 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     Polygon: object,
     Square: object,
     Box: object,
-    Circle: object
+    Circle: object,
+    HeatData: object,
+    route: Array<any>
   };
   map: Map;
+  markText = '开始移动';
+  heatMapLayer = null;
+  clusterMapLayer = null;
+  markerAnimationLayer = null;
+  markDisabled = true;
 
   ngOnInit(): void {
     this.http.get('../../assets/geojson.json').subscribe(data => {
@@ -83,6 +91,9 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     });
   }
   clearLayer() {
+    this.closeHeatMap();
+    this.closeClusterMap();
+    this.closeMarkerAnimation();
     this.mapService.clearLayer();
   }
   addPoint() {
@@ -108,4 +119,49 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
       console.log('编辑结果', data);
     });
   }
+
+  showHeatMap() {
+    this.heatMapLayer = this.mapService.showHeatMap(this.geojson.HeatData[0]);
+  }
+  closeHeatMap() {
+    this.mapService.closeHeatMap(this.heatMapLayer);
+  }
+  showClusterMap() {
+    const features = []
+    for (let i = 0; i < 20000; ++i) {
+      const coordinates = [108 + Math.random(), 22 + Math.random()];
+      features[i] = new Feature(new Point(coordinates));
+    }
+    const result = this.mapService.showClusterMap(features);
+    this.clusterMapLayer = result.layer;
+  }
+  closeClusterMap() {
+    this.mapService.closeClusterMap(this.clusterMapLayer)
+  }
+  markerAnimation() {
+    this.markDisabled = false;
+    this.markerAnimationLayer = this.mapService.markerAnimation(this.geojson.route);
+  }
+  closeMarkerAnimation() {
+    this.mapService.closeMarkerAnimation(this.markerAnimationLayer)
+  }
+  changeAnimation() {
+    if (this.markDisabled) {
+      this.mapService.stopAnimation();
+      this.markText = '开始移动'
+      this.markDisabled = !this.markDisabled;
+    } else {
+      this.markText = '停止移动';
+      this.mapService.startAnimation();
+      this.markDisabled = !this.markDisabled;
+    }
+  }
+  mapClick() {
+    const points = [];
+    this.mapService.clickEvent().subscribe(data => {
+      points.push(data.coordinate)
+      console.log('点击返回', points);
+    })
+  }
+
 }

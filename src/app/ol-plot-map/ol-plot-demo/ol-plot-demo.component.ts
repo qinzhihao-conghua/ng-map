@@ -1,18 +1,18 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { ViewOptions } from 'ol/View';
-import { MapService } from 'src/app/service/map.service';
 import { Map } from 'ol';
+import { OlMapService } from 'src/app/service/ol-map-service';
 
 @Component({
   selector: 'app-ol-plot-demo',
   templateUrl: './ol-plot-demo.component.html',
   styleUrls: ['./ol-plot-demo.component.scss'],
-  providers: [MapService]
+  providers: [OlMapService]
 })
 export class OlPlotDemoComponent implements OnInit, AfterViewInit {
 
   constructor(
-    private mapService: MapService,
+    private mapService: OlMapService,
   ) { }
 
   map: Map;
