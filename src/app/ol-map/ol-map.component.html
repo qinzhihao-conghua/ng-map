@@ -1,16 +1,13 @@
 <div class="main-container">
-    <ul class="left">
-        <li class="list-item">
-            <a [routerLink]="['./ol-map']">openlayer-未封装</a>
-        </li>
-        <li class="list-item">
-            <a [routerLink]="['./bd-map']">openlayer-百度</a>
-        </li>
-        <li class="list-item">
-            <a [routerLink]="['./demo']">service-demo</a>
-        </li>
-    </ul>
-    <div class="right">
-        <router-outlet></router-outlet>
-    </div>
+  <ul class="left">
+    <li class="list-item">
+      <a [routerLink]="['./bd-map']">openlayer-百度</a>
+    </li>
+    <li class="list-item">
+      <a [routerLink]="['./ol-service']">ol-service</a>
+    </li>
+  </ul>
+  <div class="right">
+    <router-outlet></router-outlet>
+  </div>
 </div>
