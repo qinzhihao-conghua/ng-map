@@ -2,20 +2,20 @@ import { AfterViewInit, Component, OnInit } from '@angular/core';
 import * as turf from '@turf/turf';
 import { ViewOptions } from 'ol/View';
 import { Map } from 'ol';
-import { MapService } from 'src/app/service/map.service';
 import { Select } from 'ol/interaction';
 import { GeoJSON } from 'ol/format';
+import { OlMapService } from 'src/app/service/ol-map-service';
 
 @Component({
   selector: 'app-turf-demo',
   templateUrl: './turf-demo.component.html',
   styleUrls: ['./turf-demo.component.scss'],
-  providers: [MapService]
+  providers: [OlMapService]
 })
 export class TurfDemoComponent implements OnInit, AfterViewInit {
 
   constructor(
-    private mapService: MapService,
+    private mapService: OlMapService,
   ) { }
 
   map: Map;
