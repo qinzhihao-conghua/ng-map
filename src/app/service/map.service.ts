@@ -28,7 +28,7 @@ import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
 import { Observable, Subject } from 'rxjs';
 import { Icon, Text } from 'ol/style';
-import { Observable } from './observable';
+// import { Observable } from './observable';
 import ImageLayer from 'ol/layer/Image';
 import XYZ from 'ol/source/XYZ';
 import TileWMS from 'ol/source/TileWMS';

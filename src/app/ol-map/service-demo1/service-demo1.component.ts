@@ -4,6 +4,7 @@ import { ViewOptions } from 'ol/View';
 import { HttpClient } from '@angular/common/http';
 import { Feature, Map } from 'ol';
 import { GeoJSON } from 'ol/format';
+import { Stroke, Style } from 'ol/style';
 
 @Component({
   selector: 'app-service-demo1',
@@ -28,6 +29,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     Circle: object
   };
   map: Map;
+  currentFeature: Feature;
 
   ngOnInit(): void {
     this.http.get('../../assets/geojson.json').subscribe(data => {
@@ -75,6 +77,7 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
   addInteractions(type: string) {
     this.mapService.addInteractions(type).subscribe(data => {
       console.log('绘制结果', data);
+      this.currentFeature = new GeoJSON().readFeature(data);
     });
   }
   deleteLayer() {
@@ -107,5 +110,14 @@ export class ServiceDemo1Component implements OnInit, AfterViewInit {
     this.mapService.editLayer().subscribe(data => {
       console.log('编辑结果', data);
     });
+  }
+  setFeatureStyle() {
+    this.currentFeature.setStyle(new Style({
+      stroke: new Stroke({
+        color: '#000',
+        width: 6,
+        lineDash: [4, 6]
+      })
+    }));
   }
 }
