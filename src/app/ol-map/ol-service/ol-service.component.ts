@@ -163,5 +163,8 @@ export class OlServiceComponent implements OnInit {
       console.log('点击返回', points);
     })
   }
+  getAllFeatures() {
+    this.mapService.getAllFeature()
+  }
 
 }

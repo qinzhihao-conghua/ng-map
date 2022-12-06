@@ -1,0 +1,54 @@
+<div class="patrol-plan">
+  <div class="map-tools" *ngIf="showTools">
+    <span class="icon-map-location" title="点" (click)="draw('Point')"
+      [ngClass]="acticeType==='Point'?'active':''"></span>
+    <span class="icon-select-line" title="线" (click)="draw('LineString')"
+      [ngClass]="acticeType==='LineString'?'active':''"></span>
+    <span class="icon-checkbox-unchecked" title="面" (click)="draw('Polygon')"
+      [ngClass]="acticeType==='Polygon'?'active':''"></span>
+    <span class="icon-radio-unchecked" title="圆" (click)="draw('Circle')"
+      [ngClass]="acticeType==='Circle'?'active':''"></span>
+    <span class="icon-point-up" title="抓手点击" (click)="draw('hand')" [ngClass]="acticeType==='hand'?'active':''"></span>
+    <span class="icon-plan-edit" title="编辑" (click)="draw('edit')" [ngClass]="acticeType==='edit'?'active':''"></span>
+    <span class="icon-cancel" title="取消绘制" (click)="draw(null)" [ngClass]="acticeType===''?'active':''"></span>
+    <span class="icon-delete3" title="删除" (click)="draw('delete')" [ngClass]="acticeType==='delete'?'active':''"></span>
+    <span class="icon-delete-2" title="清空" (click)="draw('clear')" [ngClass]="acticeType===''?'active':''"></span>
+  </div>
+  <div class="properties-panel" [hidden]="hiddenPanel">
+    <ul>
+      <li>
+        <label>线条颜色</label>
+        <div class="color-container">
+          <span class="color-block"
+            [ngStyle]="{'background-color': item,'border-color':currentStrokeColor===item?'#000':'transparent'}"
+            *ngFor="let item of strokeColors;let i=index" (click)="chooseColor(item,'stroke')"></span>
+        </div>
+      </li>
+      <li>
+        <label>填充颜色</label>
+        <div class="color-container">
+          <span class="color-block"
+            [ngStyle]="{'background-color': item,'border-color':currentFillColor===item?'#000':'transparent'}"
+            *ngFor="let item of fillColors;let i=index" (click)="chooseColor(item,'fill')"></span>
+        </div>
+      </li>
+      <li>
+        <label>图层名称</label>
+        <input rows="4" nz-input [(ngModel)]="layerName" />
+      </li>
+      <li>
+        <label>图层描述</label>
+        <textarea rows="4" nz-input [(ngModel)]="layerDesc"></textarea>
+      </li>
+      <li style="justify-content: flex-end;">
+        <button nz-button nzSize="small" nzType="primary" (click)="closePanel()">关闭</button>
+        <button nz-button nzSize="small" nzType="primary" (click)="setStyle()">确定</button>
+      </li>
+    </ul>
+  </div>
+  <!-- <div id="popup" class="ol-popup">
+      <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer icon-close1"></a>
+      <div id="popup-content"></div>
+    </div> -->
+  <div class="map" id="map-container"></div>
+</div>
