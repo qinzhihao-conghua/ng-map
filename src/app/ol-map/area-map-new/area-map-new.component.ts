@@ -3,7 +3,7 @@ import { Map } from 'ol';
 import Feature from 'ol/Feature';
 import { ViewOptions } from 'ol/View';
 import { Style, Icon } from 'ol/style';
-import { OlMapService } from './ol-map-service';
+import { OlMapService } from '../../service/ol-map-service';
 declare var turf: any;
 
 @Component({
@@ -89,7 +89,7 @@ export class AreaMapNewComponent implements OnInit {
       case 'LineString':
       case 'Polygon':
       case 'Circle':
-        const imgSrc = type === 'Point' ? 'assets/img/location.png' : '';
+        const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
         this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
           this.activeFeature(data);
           setTimeout(() => {
