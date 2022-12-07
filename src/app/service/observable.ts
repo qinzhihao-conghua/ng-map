@@ -1,7 +1,7 @@
 /**
  * 简单实现rxjs中的Observable，以处理需要数据订阅时的麻烦，降低工具库与项目代码耦合度
  */
-export class Observable {
+export class Observable<T> {
     constructor() { }
     //订阅者列表，每个订阅者其实是一个处理得到信息的函数
     private subscribers: Array<any> = [];
@@ -10,7 +10,7 @@ export class Observable {
      * @param data 要发布的数据
      * @returns 返回实例对象 
      */
-    next(data: any) {
+    next(data: T) {
         // //将信息发布给每个订阅者，fn代表订阅者
         this.subscribers.forEach(fn => fn(data));
         return this;

@@ -1,7 +1,6 @@
 <div class="patrol-plan">
   <div class="map-tools" *ngIf="showTools">
-    <span class="icon-map-location" title="点" (click)="draw('Point')"
-      [ngClass]="acticeType==='Point'?'active':''"></span>
+    <span class="icon-location" title="点" (click)="draw('Point')" [ngClass]="acticeType==='Point'?'active':''"></span>
     <span class="icon-select-line" title="线" (click)="draw('LineString')"
       [ngClass]="acticeType==='LineString'?'active':''"></span>
     <span class="icon-checkbox-unchecked" title="面" (click)="draw('Polygon')"
@@ -9,10 +8,10 @@
     <span class="icon-radio-unchecked" title="圆" (click)="draw('Circle')"
       [ngClass]="acticeType==='Circle'?'active':''"></span>
     <span class="icon-point-up" title="抓手点击" (click)="draw('hand')" [ngClass]="acticeType==='hand'?'active':''"></span>
-    <span class="icon-plan-edit" title="编辑" (click)="draw('edit')" [ngClass]="acticeType==='edit'?'active':''"></span>
+    <span class="icon-edit" title="编辑" (click)="draw('edit')" [ngClass]="acticeType==='edit'?'active':''"></span>
     <span class="icon-cancel" title="取消绘制" (click)="draw(null)" [ngClass]="acticeType===''?'active':''"></span>
     <span class="icon-delete3" title="删除" (click)="draw('delete')" [ngClass]="acticeType==='delete'?'active':''"></span>
-    <span class="icon-delete-2" title="清空" (click)="draw('clear')" [ngClass]="acticeType===''?'active':''"></span>
+    <span class="icon-clean" title="清空" (click)="draw('clear')" [ngClass]="acticeType===''?'active':''"></span>
   </div>
   <div class="properties-panel" [hidden]="hiddenPanel">
     <ul>

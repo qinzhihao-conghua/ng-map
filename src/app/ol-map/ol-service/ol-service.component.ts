@@ -38,7 +38,7 @@ export class OlServiceComponent implements OnInit {
   markDisabled = true;
 
   ngOnInit(): void {
-    this.http.get('../../assets/geojson.json').subscribe(data => {
+    this.http.get('../../assets/geojson-collection.json').subscribe(data => {
       this.geojson = data as any;
       console.log('geojson数据', data);
     });
@@ -55,25 +55,25 @@ export class OlServiceComponent implements OnInit {
   }
   openPopup() {
     this.mapService.clearInteraction();
-    this.mapService.clickEvent().subscribe(data => {
-      this.coordinate = data.coordinate;
+    this.mapService.clickToGetFeature().subscribe(data => {
+      // this.coordinate = data.coordinate;
       // 这种方式展示popup不是很理想，比较理想的方式是通过select去获取，但是需要多处理一些
-      const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
-      console.log('点击返回', features);
-      if (features.length > 0) {
-        console.log('features属性', features[0].getProperties());
-        console.log('转成geojson', new GeoJSON().writeFeature(features[0] as Feature));
-        const dom = document.getElementById('popup');
-        dom.style.display = 'block';
-        const content = document.getElementById('popup-content');
-        content.innerHTML = `
+      // const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
+      console.log('点击返回', data);
+      // if (features.length > 0) {
+      console.log('features属性', data.getProperties());
+      console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      const dom = document.getElementById('popup');
+      dom.style.display = 'block';
+      const content = document.getElementById('popup-content');
+      content.innerHTML = `
             <p>测试popup</p>
             <p>测试popup</p>
             <p>测试popup</p>
             <p>测试popup</p>
           `;
-        this.mapService.showPopup(dom, data.coordinate, 'test');
-      }
+      // this.mapService.showPopup(dom, data.coordinate, 'test');
+      // }
     });
   }
   closePopup() {
@@ -106,7 +106,8 @@ export class OlServiceComponent implements OnInit {
     this.mapService.showPolygon(this.geojson.Polygon);
   }
   showCircle() {
-    this.mapService.showCircle([108.41378967683895, 22.793760087092004], 2500, 'EPSG:4326');
+    // this.mapService.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
+    this.mapService.showPolygon(this.geojson.Circle);
   }
   showSquare() {
     this.mapService.showSquare(this.geojson.Square);
@@ -158,9 +159,9 @@ export class OlServiceComponent implements OnInit {
   }
   mapClick() {
     const points = [];
-    this.mapService.clickEvent().subscribe(data => {
-      points.push(data.coordinate)
-      console.log('点击返回', points);
+    this.mapService.clickToGetFeature().subscribe(data => {
+      // points.push(data.coordinate)
+      console.log('点击返回', data);
     })
   }
   getAllFeatures() {
