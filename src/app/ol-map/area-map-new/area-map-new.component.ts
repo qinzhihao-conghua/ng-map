@@ -72,11 +72,6 @@ export class AreaMapNewComponent implements OnInit {
       minZoom: 6,
       projection: 'EPSG:4326'
     };
-    // let sourceUrl = this.configService.getConfigString('map.common.layers.tile.source.url', '');
-    // let projection = this.configService.getConfigString('map.common.layer.source.projection', 'EPSG:3857');
-    // let layerType = this.configService.getConfigString('map.common.layers.type', 'Tile');
-    // let sourceType = this.configService.getConfigString('map.common.layers.tile.source.type', ' XYZ');
-    // const layerOption = { sourceUrl, projection, layerType, sourceType };
     this.mapInstance = new OlMapService();
     this.map = this.mapInstance.initMap('map-container', viewOptions);
   }
