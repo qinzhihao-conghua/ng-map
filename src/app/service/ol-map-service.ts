@@ -26,7 +26,6 @@ import { GeoJSON } from 'ol/format';
 import { ProjectionLike, transform } from 'ol/proj';
 import { ViewOptions } from 'ol/View';
 import { Icon, Text } from 'ol/style';
-import { Observable } from './observable';
 import ImageLayer from 'ol/layer/Image';
 import XYZ from 'ol/source/XYZ';
 import TileWMS from 'ol/source/TileWMS';
@@ -39,12 +38,16 @@ import Cluster from 'ol/source/Cluster';
 import { boundingExtent } from 'ol/extent';
 import IconOrigin from 'ol/style/IconOrigin';
 import IconAnchorUnits from 'ol/style/IconAnchorUnits';
+// import { Observable, Subject } from 'rxjs';
+import { defaults as olDefaults } from 'ol/interaction';
+import GeometryType from 'ol/geom/GeometryType';
+import { Observable } from './observable';
 
 
 /**
  * 底图基本信息
  */
-interface LayerOption {
+export interface LayerOption {
   sourceUrl: string;
   projection: string;
   layerType: string;
@@ -53,7 +56,7 @@ interface LayerOption {
 /**
  * 图形基本样式
  */
-interface BaseStyle {
+export interface BaseStyle {
   /**线条颜色 */
   strokeColor?: string;
   /**填充颜色 */
@@ -72,6 +75,8 @@ interface BaseStyle {
   /**图片锚点偏移，根据图片实际大小计算偏移值，单位为像素 */
   imageAnchor?: Array<number>;
 
+  /**文本 */
+  text?: string,
   /**文本缩放比例 */
   textScale?: number;
   /**文本对齐方式'left'; 'right'; 'center'; 'end' or 'start' */
@@ -88,11 +93,11 @@ interface BaseStyle {
   textStrokeColor?: string;
 }
 /**聚合图样式 */
-interface ClusterStyle {
-  radius?: number;
-  stroke?: string;
-  fill?: string;
-  textColor?: string;
+export interface ClusterStyle {
+  radius?: number,
+  stroke?: string,
+  fill?: string,
+  textColor?: string
 }
 
 export class OlMapService {
@@ -118,9 +123,9 @@ export class OlMapService {
    * new TileSuperMapRest({url:'',projection:'EPSG:4326'})
    */
   tileLayer = new TileLayer({
-    source: new OSM({
-      attributions: 'xxxx股份有限公司'
-    })
+    // source: new OSM({
+    //   attributions: 'xxxx股份有限公司'
+    // })
   });
   /**
    * 矢量图层源，相关绘制操作在这个图层上进行
@@ -161,7 +166,7 @@ export class OlMapService {
   clusterSource: Cluster;
   markObj: any = {};
   /**
-   * 初始化地图
+   * 初始化地图，该service目标是脱离框架使用，因此基本地图配置项请从外部传入
    * @param targetId 地图容器id
    * @param viewOption 视图配至项，必须有坐标中心
    * @param layerOption 底图基本信息，不传使用默认值，项目中对接时必传
@@ -188,10 +193,13 @@ export class OlMapService {
     this.map = new Map({
       target: targetId,
       controls: defaults().extend([
-        new MousePosition({ projection: 'EPSG:4326' })
+        // new MousePosition({ projection: 'EPSG:4326' })
       ]),
       layers: [this.tileLayer, this.vector],
       view: new View(viewOption),
+      interactions: olDefaults({
+        doubleClickZoom: false
+      })
     });
     return this.map;
   }
@@ -249,13 +257,18 @@ export class OlMapService {
   }
 
   /**
-   * 点击地图事件
+   * 点击获取feature
    * @returns
    */
-  clickEvent(): Observable {
-    const subject = new Observable();
+  clickToGetFeature(): Observable<Feature> {
+    // const subject = new Subject<Feature>();
+    const subject = new Observable<Feature>();
     const key = this.map.on('singleclick', (event) => {
-      subject.next(event);
+      this.map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature: Feature) => { subject.next(feature); },
+        { hitTolerance: 20 }
+      );
     });
     this.clickKey.push(key);
     return subject;
@@ -278,10 +291,11 @@ export class OlMapService {
   }
   /**
    * 生成基本样式，只用于标绘时候
+   * TODO:剩余样式未处理，使用style.属性 | 默认值的方式
    * @returns 
    */
   createStyle(style: BaseStyle): Style {
-    const { strokeColor, fillColor, pointColor, pointImageUrl, imageScal, lineWidth, lineDash } = style;
+    const { strokeColor, fillColor, pointColor, pointImageUrl, imageScal, lineWidth, lineDash, text } = style;
     let image = null;
     if (pointImageUrl) {
       image = new Icon({
@@ -308,6 +322,10 @@ export class OlMapService {
         lineDash: lineDash || null
       }),
       image: image,
+      text: new Text({
+        text,
+        scale: 1.5
+      })
     })
   }
 
@@ -320,11 +338,15 @@ export class OlMapService {
    * Polygon:面;Circle:圆;Square:正方形;Box:长方形
    * @param text 标绘后添加的文本，注意，当传入的文本长度超过绘制的图形长度，文本将不会显示
    * @param imageUrl 点图标使用图片展示时，图片的路径
+   * @param succession 是否连续绘制
+   * @param isGeojson 是否返回geojson，默认是true
+   * @returns 根据传入条件返回geojson或feature
    */
-  addInteractions(type: any, text?: string, imageUrl?: string): Observable {
+  addInteractions(type: any, text?: string, imageUrl?: string, succession?: boolean, isGeojson: boolean = true): Observable<any> {
     if (type !== 'None') {
       this.clearInteraction();
       // 
+      // const subject = new Subject();
       const subject = new Observable();
       let drawType = type;
       let geometryFunction;
@@ -348,10 +370,12 @@ export class OlMapService {
       this.snap = new Snap({ source: this.source });
       this.modify = new Modify({ source: this.source });
       this.draw.on('drawend', (e) => {
-        const geoJSON = this.drawendHandle(e, type, text, imageUrl);
+        const result = this.drawendHandle(e, type, text, imageUrl, isGeojson);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
-        // this.clearInteraction();
-        subject.next(geoJSON);
+        if (!succession) {
+          this.clearInteraction();
+        }
+        subject.next(result);
       });
       return subject;
     }
@@ -362,11 +386,13 @@ export class OlMapService {
    * @param type 绘制的类型
    * @param text 要显示的文本
    * @param imageUrl 要显示的图片地址
-   * @returns 
+   * @param isGeojson 是否返回geojson，默认是true
+   * @returns 根据传入条件返回geojson或feature
    */
-  drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string) {
-    const style = this.createStyle(this.plotStyle);
+  drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string, isGeojson: boolean = true) {
+    let style = this.createStyle(this.plotStyle);
     let { textOffsetY } = this.plotStyle;
+    e.feature.setStyle(style);
     if (text) {
       if (type !== 'Point') {
         textOffsetY = 1;
@@ -390,23 +416,110 @@ export class OlMapService {
       e.feature.setStyle(style);
     }
     if (!e.feature.getId()) {
-      e.feature.setId(Math.random());
+      e.feature.setId(this.newGuid());
     }
-    let geoJSON: any = new GeoJSON().writeFeature(e.feature);
-    if (type === 'Circle') {
-      // 1单位对应的 单位(米) 的值
-      const perMeter = this.map.getView().getProjection().getMetersPerUnit();
-      geoJSON = {
-        type: 'Circle',
-        id: Math.random(),
-        // 当前坐标系的单位的值
-        radius: (e.feature.getGeometry() as any).getRadius() * perMeter,
-        center: (e.feature.getGeometry() as any).getCenter(),
-      }
+    let result = null;
+    if (isGeojson) {
+      result = this.featuresToGeojson([e.feature])
+    } else {
+      result = e.feature;
     }
     // 关闭键盘监听
     document.onkeypress = null;
+    return result;
+  }
+  /**
+   * 生成id
+   * @returns 
+   */
+  newGuid() {
+    let guid = '';
+    for (let i = 1; i <= 32; i++) {
+      const n = Math.floor(Math.random() * 16.0).toString(16);
+      guid += n;
+    }
+    return guid;
+  }
+  /**
+   * 将feature转成geojson，geojson不支持Circle类型的feature转换，
+   * 因此用点类型记录圆的geojson，在properties属性中添加subType标记为圆类型，radius为半径
+   * @param features
+   * @returns 
+   */
+  featuresToGeojson(features: Array<Feature>) {
+    let geoJSON: any; //= new GeoJSON().writeFeature(feature);
+    const featuresCache = [];
+    features.forEach(item => {
+      const type = item.getGeometry().getType();
+      const properties = item.getProperties();
+      if (type === GeometryType.CIRCLE) {
+        // 1单位对应的 单位(米) 的值
+        const perMeter = this.map.getView().getProjection().getMetersPerUnit();
+        const center = (item.getGeometry() as any).getCenter();
+        // 必须先将原有的几何信息删除
+        delete properties.geometry;
+        let circleFeature = new Feature({
+          geometry: new Point(center)
+        });
+        circleFeature.setId(item.getId().toString())
+        const pro = {
+          subType: 'Circle',
+          center,
+          radius: (item.getGeometry() as any).getRadius() * perMeter,
+          ...properties
+        };
+        circleFeature.setProperties(pro);
+        featuresCache.push(circleFeature);
+      } else {
+        featuresCache.push(item);
+      }
+    })
+    geoJSON = new GeoJSON().writeFeatures(featuresCache);
     return geoJSON;
+  }
+
+  /**
+   * 设置feature样式和属性
+   * @param feature 要设置的feature
+   * @param style 要设置的样式。可接收Style类型或者简单对象，对象类型暂未定
+   * @param properties 要设置的属性
+   */
+  setFeatureStyle(feature: Feature, style: Style | object, properties?: object) {
+    if (style instanceof Style) {
+      feature.setStyle(style);
+    } else {
+      const { strokeColor, fillColor, imageUrl, text } = style as any;
+      const featureStyle: Style = feature.getStyle() as Style;
+      featureStyle.getStroke().setColor(strokeColor);
+      featureStyle.getFill().setColor(fillColor);
+      // featureStyle.getImage().load(imageUrl)
+      featureStyle.getText() ? featureStyle.getText().setText(text) : featureStyle.setText(new Text({ text, scale: 1.5 }))
+    }
+    feature.setProperties(properties)
+  }
+
+  /**
+   * 获取绘制的所有图层，待验证
+   * @returns 
+   */
+  getAllFeature() {
+    // const result = this.source.getFeatures();
+    const result = this.vector.getSource().getFeatures();
+    return result;
+  }
+  /**
+   * 设置中心
+   * @param center 
+   * @param zoom 
+   * @param duration 
+   */
+  setCenter(center: number[], zoom: number = 12, duration: number = 1000) {
+    this.map.getView().animate({
+      center: center, // 中心点
+      zoom: zoom, // 缩放级别
+      rotation: undefined, // 缩放完成view视图旋转弧度
+      duration: duration // 缩放持续时间，默认不需要设置
+    })
   }
 
   /**
@@ -439,8 +552,9 @@ export class OlMapService {
   /**
    * 点击删除图层
    */
-  deleteLayer(): Observable {
+  deleteLayer(): Observable<any> {
     this.clearInteraction();
+    // const subject = new Subject();
     const subject = new Observable();
     // 移入高亮
     this.highlight = new Select({ condition: pointerMove });
@@ -526,27 +640,78 @@ export class OlMapService {
     let features = null;
     if (Array.isArray(geojson)) {
       features = turf.featureCollection(geojson);
+    } else if (geojson.type === 'FeatureCollection') {
+      features = turf.featureCollection(geojson.features);
     } else {
       features = turf.featureCollection([geojson]);
     }
     const center = turf.center(features).geometry.coordinates;
     this.map.getView().setCenter(center);
   }
-
+  /**
+   * 根据geojson中Properties返回的样式对图形设置样式
+   * @param geojsonData 原始的geojson数据
+   * @param features 将geojson数据转成features后的数据
+   * @returns
+   */
+  setStyleByProperties(geojsonData, features: Array<Feature>) {
+    const resultFeatures = [];
+    geojsonData.features.forEach((item, index) => {
+      const style = item.properties ? item.properties.style : null;
+      let styleInstance = null;
+      if (style) {
+        styleInstance = new Style({
+          stroke: new Stroke({
+            color: style.strokeColor
+          }),
+          fill: new Fill({
+            color: style.fillColor
+          }),
+          text: new Text({
+            text: style.text,
+            scale: 1.5
+          }),
+          image: new Icon({
+            src: style.pointImageUrl,
+            anchor: [0.5, 1],
+            scale: .15
+          })
+        })
+      }
+      if (item.properties && item.properties.subType === 'Circle') {
+        // 这时候的json是点的json
+        let geometry = new CircleGemo(item.properties.center, item.properties.radius);
+        const projection = this.map.getView().getProjection();
+        if (projection.getCode() === 'EPSG:4326') {
+          let result = transform(item.properties.center, 'EPSG:4326', 'EPSG:3857');
+          // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
+          geometry = new CircleGemo(result, item.properties.radius).transform('EPSG:3857', 'EPSG:4326') as any;
+        }
+        const circleFeature = new Feature({ geometry });
+        circleFeature.setStyle(styleInstance);
+        circleFeature.setProperties({ ...item.properties });
+        resultFeatures.push(circleFeature);
+      } else {
+        features[index].setStyle(styleInstance);
+        resultFeatures.push(features[index]);
+      }
+    });
+    return resultFeatures;
+  }
   /**
    * 撒点
    * @param geoPoints 点坐标
    */
-  showPoint(geoPoints?: Array<any>) {
+  showPoint(geoPoints: any, showdAnimate?: boolean) {
     // 监听导致绘制点的时候也执行添加动画
-    const key = this.source.on('addfeature', (e) => {
-      this.addAnimate(e.feature);
-    });
-    // 数据量过大是否有性能问题？
-    geoPoints.forEach(point => {
-      const geo = new GeoJSON().readFeatures(point);
-      this.source.addFeatures(geo);
-    });
+    let key = null;
+    if (showdAnimate) {
+      key = this.source.on('addfeature', (e) => {
+        this.addAnimate(e.feature);
+      });
+    }
+    const geo = new GeoJSON().readFeatures(geoPoints);
+    this.source.addFeatures(geo);
     this.setFeaturesCenter(geoPoints);
     this.clearInteraction();
     // 撒点完成之后解除事件绑定，防止在绘制其他图形时产生动画
@@ -564,33 +729,53 @@ export class OlMapService {
     this.clearInteraction();
   }
   /**
-   * 撒多边形
+   * 撒多边形，可以撒所有图形
    * @param geoPolygon geojson多边形数据
    */
-  showPolygon(geoPolygon: object) {
-    const polygon = new GeoJSON().readFeature(geoPolygon);
-    this.source.addFeature(polygon);
+  showPolygon(geoPolygon: any) {
+    const polygons = new GeoJSON().readFeatures(geoPolygon);
+    let result = null;
+    if (geoPolygon.type === 'FeatureCollection') {
+      result = this.setStyleByProperties(geoPolygon, polygons);
+    }
+    this.source.addFeatures(result);
     this.setFeaturesCenter(geoPolygon);
     this.clearInteraction();
   }
   /**
-   * 撒圆
-   * circleCenter暂定只能传经纬度
-   * @param circleCenter 圆心坐标
-   * @param r 圆的半径，单位米
+   * 撒圆，这个方法只是对只有中心坐标和半径的情况下进行撒圆，如果是geojson数据的使用showPolygon
+   * center默认只能传经纬度，如果是公里网数据，dataEPSG请传入EPSG:3857
+   * @param circleJson 目前情况下circleJson中的properties请最基本请传入{style:{}}
    * @param dataEPSG 圆心数据属于什么坐标
    */
-  showCircle(circleCenter: Array<any>, r: number, dataEPSG: string) {
-    let centerPoint = circleCenter;
-    let geometry: CircleGemo = new CircleGemo(centerPoint, r);
+  showCircle(circleJson: { center: Array<any>, radius: number, properties?: any }, dataEPSG: string = 'EPSG:4326') {
+    let centerPoint = circleJson.center;
+    let radius = circleJson.radius;
+    let properties = circleJson.properties;
+
+    let geometry: CircleGemo = new CircleGemo(centerPoint, radius);
     if (dataEPSG === 'EPSG:4326') {
-      centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
+      let result = transform(centerPoint, 'EPSG:4326', 'EPSG:3857');
       // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米
-      geometry = new CircleGemo(centerPoint, r).transform('EPSG:3857', 'EPSG:4326') as any;
+      geometry = new CircleGemo(result, radius).transform('EPSG:3857', 'EPSG:4326') as any;
     }
     const circleFeature = new Feature({ geometry });
+    const style = new Style({
+      stroke: new Stroke({
+        color: properties.style.strokeColor
+      }),
+      fill: new Fill({
+        color: properties.style.fillColor
+      }),
+      text: new Text({
+        text: properties.style.text,
+        scale: 1.5
+      })
+    })
+    circleFeature.setStyle(style)
     // 将所有矢量图层添加进去
-    this.source.addFeature(circleFeature);
+    this.source.addFeatures([circleFeature]);
+    this.setCenter(centerPoint);
     this.clearInteraction();
   }
   /**
@@ -714,13 +899,17 @@ export class OlMapService {
   /**
    * 编辑图层
    */
-  editLayer(): Observable {
-    const subject = new Observable();
-    // 移入高亮 为了一个高亮效果而已
-    this.highlight = new Select({ condition: pointerMove });
-    this.map.addInteraction(this.highlight);
+  editLayer(): Observable<Feature<Geometry>[]> {
+    // const subject = new Subject<Feature<Geometry>[]>();
+    const subject = new Observable<Feature<Geometry>[]>();
+    // 移入高亮 为了一个高亮效果而已，这个高亮效果会有一个效率不高的警告
+    // this.highlight = new Select({ condition: pointerMove });
+    // this.map.addInteraction(this.highlight);
     this.map.addInteraction(this.modify);
-    this.modify.on('modifyend', e => subject.next(e));
+    this.modify.on('modifyend', e => {
+      const result = e.features.getArray();
+      subject.next(result)
+    });
     return subject;
   }
 
@@ -790,7 +979,7 @@ export class OlMapService {
       'icon': new Style({
         image: new Icon({
           anchor: [0.5, 1],
-          src: 'assets/location.jpg',
+          src: 'assets/img/location.png',
           scale: .15
         }),
       }),

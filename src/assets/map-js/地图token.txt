@@ -1,0 +1,9 @@
+
+export const AccessToken = {
+  tianditu: '20b1ddbd59370c477d07bac00ab1282d',
+  mapbox: 'pk.eyJ1IjoicHVyYnVubnlsdWx1IiwiYSI6ImNqcmZ4d2s2bjFoc3c0OWxwZ3ZuODN0aDUifQ.C175LEETPWpywcJa0uXtpA',
+  mapabc: 'ec85d3648154874552835438ac6a02b2',
+  minemap: '16be596e00c44c86bb1569cb53424dc9',
+  ppmap: '25cc55a69ea7422182d00d6b7c0ffa93',
+  emg: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJyYW5kb20iOiIzMDA3ZTFlNmNjOTI0YjQ0ODJmZDMyYmRjMjdmODMxNCIsImV4cGlyZXMiOiItMSIsInNjb3BlIjoiQkZGRkYiLCJ1c2VyTmFtZSI6ImRlbW8tcG9ydGFsIn0.YjdkNTY4N2Y1NDE1NzAzNDE1ZGU5NmQwZjJkMzIxOWVjMzQ4ZjZmNGYxNGVmYWFkNzliM2IyZWIxZmQwMTE4Zg'
+};
