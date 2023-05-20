@@ -135,18 +135,18 @@ export class MapService {
   }
 
   /**
-     * 生成图层Layer
-     * @param layerType 图层类型
-     * @param sourceType 图源类型
-     * @param sourceUrl 图源服务url
-     * @returns Layer
-     */
+   * 生成图层Layer
+   * @param layerType 图层类型
+   * @param sourceType 图源类型
+   * @param sourceUrl 图源服务url
+   * @returns Layer
+   */
   private createMapLayer(layerType: string, sourceType: string, sourceUrl: string) {
     let layer = null;
-    let source = this.createTileSource(sourceType, sourceUrl);
+    const source = this.createTileSource(sourceType, sourceUrl);
     switch (layerType) {
       case 'Image':
-        layer = new ImageLayer({ source: source });
+        layer = new ImageLayer({ source });
         break;
       case 'Tile':
         layer = new TileLayer({ source: source });

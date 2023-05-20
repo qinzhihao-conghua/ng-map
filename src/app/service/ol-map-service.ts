@@ -45,54 +45,54 @@ import IconAnchorUnits from 'ol/style/IconAnchorUnits';
  * 底图基本信息
  */
 interface LayerOption {
-  sourceUrl: string,
-  projection: string,
-  layerType: string,
-  sourceType: string
+  sourceUrl: string;
+  projection: string;
+  layerType: string;
+  sourceType: string;
 }
 /**
  * 图形基本样式
  */
 interface BaseStyle {
   /**线条颜色 */
-  strokeColor?: string,
+  strokeColor?: string;
   /**填充颜色 */
-  fillColor?: string,
+  fillColor?: string;
   /**线条宽度 */
-  lineWidth?: number,
+  lineWidth?: number;
   /**虚线线条，传入则说明使用虚线线条 */
-  lineDash?: Array<number>
+  lineDash?: Array<number>;
   /**点颜色，与图片互斥 */
-  pointColor?: string,
+  pointColor?: string;
 
   /**坐标点图片地址，与点互斥 */
-  pointImageUrl?: string,
+  pointImageUrl?: string;
   /**图片图标缩放比例 */
-  imageScal?: number,
+  imageScal?: number;
   /**图片锚点偏移，根据图片实际大小计算偏移值，单位为像素 */
-  imageAnchor?: Array<number>,
+  imageAnchor?: Array<number>;
 
   /**文本缩放比例 */
-  textScale?: number,
-  /**文本对齐方式'left', 'right', 'center', 'end' or 'start' */
-  textAlign?: 'center',
-  /**文本基线'bottom', 'top', 'middle', 'alphabetic', 'hanging', 'ideographic' */
-  textBaseline?: 'top',
+  textScale?: number;
+  /**文本对齐方式'left'; 'right'; 'center'; 'end' or 'start' */
+  textAlign?: 'center';
+  /**文本基线'bottom'; 'top'; 'middle'; 'alphabetic'; 'hanging'; 'ideographic' */
+  textBaseline?: 'top';
   /**文本Y轴偏置 */
-  textOffsetY?: number,
+  textOffsetY?: number;
   /**文本X轴偏置 */
-  textOffsetX?: number,
+  textOffsetX?: number;
   /**文本填充颜色 */
-  textFillColor?: string,
+  textFillColor?: string;
   /**文本线条颜色 */
-  textStrokeColor?: string,
+  textStrokeColor?: string;
 }
 /**聚合图样式 */
 interface ClusterStyle {
-  radius?: number,
-  stroke?: string,
-  fill?: string,
-  textColor?: string
+  radius?: number;
+  stroke?: string;
+  fill?: string;
+  textColor?: string;
 }
 
 export class OlMapService {
@@ -178,7 +178,7 @@ export class OlMapService {
    */
   initMap(targetId: string, viewOption: ViewOptions, layerOption: LayerOption = this.otherTest, baseStyle: BaseStyle = {}): Map {
 
-    let { sourceUrl, projection, layerType, sourceType } = layerOption;
+    const { sourceUrl, projection, layerType, sourceType } = layerOption;
     this.plotStyle = baseStyle;
     // 创建地图图层
     this.tileLayer = this.createMapLayer(layerType, sourceType, sourceUrl);
@@ -365,14 +365,14 @@ export class OlMapService {
    * @returns 
    */
   drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string) {
-    let style = this.createStyle(this.plotStyle);
+    const style = this.createStyle(this.plotStyle);
     let { textOffsetY } = this.plotStyle;
     if (text) {
       if (type !== 'Point') {
         textOffsetY = 1;
       }
       style.setText(new Text({
-        text: text,
+        text,
         scale: this.plotStyle.textScale || 1.5,
         offsetY: textOffsetY || -35
       }));

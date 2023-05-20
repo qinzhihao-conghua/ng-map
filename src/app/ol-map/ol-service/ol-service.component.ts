@@ -5,6 +5,10 @@ import { ViewOptions } from 'ol/View';
 import { GeoJSON } from 'ol/format';
 import { OlMapService } from 'src/app/service/ol-map-service';
 import Point from 'ol/geom/Point';
+import { Circle, Fill, Icon, Stroke, Style, Text } from 'ol/style';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import { transform } from 'ol/proj';
 
 @Component({
   selector: 'app-ol-service',
@@ -36,6 +40,7 @@ export class OlServiceComponent implements OnInit {
   clusterMapLayer = null;
   markerAnimationLayer = null;
   markDisabled = true;
+  currentFeature: Feature;
 
   ngOnInit(): void {
     this.http.get('../../assets/geojson.json').subscribe(data => {
@@ -100,6 +105,55 @@ export class OlServiceComponent implements OnInit {
   addPoint() {
     this.mapService.showPoint(this.geojson.Points);
   }
+  addPoint1() {
+    // const iconFeature = new Feature({
+    //   geometry: new Point([108.316492, 22.818136]),
+    // });
+    const iconFeature = new Feature(new Point([108.316492, 22.818136]));
+
+    const iconStyle = new Style({
+      image: new Icon({
+        anchor: [0.5, 1],
+        src: 'assets/location.jpg',
+        scale: .15
+      })
+    });
+
+    iconFeature.setStyle([iconStyle]);
+    const vectorSource = new VectorSource({
+      features: [iconFeature],
+    });
+
+    const vectorLayer = new VectorLayer({
+      source: vectorSource
+    });
+    this.mapService.source.addFeature(iconFeature);
+    // this.map.addLayer(vectorLayer);
+  }
+
+  addPoint2() {
+    const iconFeature = new Feature({
+      geometry: new Point([108.316492, 22.818136]),
+    });
+
+    const iconStyle = new Style({
+      image: new Icon({
+        anchor: [0.5, 1],
+        src: 'assets/location.jpg',
+        scale: .15
+      })
+    });
+
+    iconFeature.setStyle([iconStyle]);
+    const vectorSource = new VectorSource({
+      features: [iconFeature],
+    });
+
+    const vectorLayer = new VectorLayer({
+      source: vectorSource
+    });
+    this.map.addLayer(vectorLayer);
+  }
   showPolyline() {
     this.mapService.showPolyline(this.geojson.line);
   }
@@ -163,6 +217,22 @@ export class OlServiceComponent implements OnInit {
       points.push(data.coordinate)
       console.log('点击返回', points);
     })
+  }
+
+  setFeatureStyle() {
+    this.currentFeature.setStyle(new Style({
+      stroke: new Stroke({
+        color: '#000',
+        width: 6,
+        lineDash: [4, 8]
+      }),
+      text: new Text({
+        text: '666'
+      })
+    }));
+    // this.map.getLayers().changed();
+    // this.map.changed();
+    this.currentFeature.changed();
   }
 
 }
