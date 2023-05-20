@@ -4,7 +4,6 @@ import { NgModule } from '@angular/core';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HttpClientModule } from '@angular/common/http';
-import { OlMapModule } from './ol-map/ol-map.module';
 import { TestComponent } from './test/test.component';
 
 @NgModule({
@@ -15,8 +14,7 @@ import { TestComponent } from './test/test.component';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    HttpClientModule,
-    OlMapModule
+    HttpClientModule
   ],
   providers: [],
   bootstrap: [AppComponent]

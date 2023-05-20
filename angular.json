@@ -29,9 +29,14 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/ol/ol.css"
+              "node_modules/ol/ol.css",
+              "src/assets/map-js/mapabc/mapabc.css",
+              "src/assets/map-js/minemap/2.1.0/minemap2.1.0.css"
             ],
-            "scripts": []
+            "scripts": [
+              "src/assets/map-js/mapabc/mapabc.js",
+              "src/assets/map-js/minemap/2.1.0/minemap2.1.0.js"
+            ]
           },
           "configurations": {
             "production": {
