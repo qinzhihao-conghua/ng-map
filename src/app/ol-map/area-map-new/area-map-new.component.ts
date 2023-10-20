@@ -205,5 +205,59 @@ export class AreaMapNewComponent implements OnInit {
   closePopup() {
     this.mapInstance.closeOverlay(this.currentPopuId)
   }
-
+  exportPng() {
+    // postcompose rendercomplete
+    this.map.once('rendercomplete', () => {
+      const mapCanvas = document.createElement('canvas');
+      const size = this.map.getSize();
+      mapCanvas.width = size[0];
+      mapCanvas.height = size[1];
+      const mapContext = mapCanvas.getContext('2d');
+      Array.prototype.forEach.call(
+        this.map.getViewport().querySelectorAll('.ol-layer canvas, canvas.ol-layer'),
+        (canvas: HTMLCanvasElement) => {
+          if (canvas.width > 0) {
+            // canvas.setAttribute("crossOrigin", 'Anonymous')
+            // @ts-ignore
+            const opacity = canvas.parentNode.style.opacity || canvas.style.opacity;
+            mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+            let matrix;
+            const transform = canvas.style.transform;
+            if (transform) {
+              // Get the transform parameters from the style's transform matrix
+              matrix = transform.match(/^matrix\(([^\(]*)\)$/)[1].split(',').map(Number);
+            } else {
+              matrix = [
+                parseFloat(canvas.style.width) / canvas.width,
+                0,
+                0,
+                parseFloat(canvas.style.height) / canvas.height,
+                0,
+                0,
+              ];
+            }
+            // Apply the transform to the export map context
+            CanvasRenderingContext2D.prototype.setTransform.apply(mapContext, matrix);
+            // @ts-ignore
+            const backgroundColor = canvas.parentNode.style.backgroundColor;
+            if (backgroundColor) {
+              mapContext.fillStyle = backgroundColor;
+              mapContext.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            mapContext.drawImage(canvas, 0, 0);
+          }
+        }
+      );
+      mapContext.globalAlpha = 1;
+      mapContext.setTransform(1, 0, 0, 1, 0, 0);
+      const link = document.getElementById('image-download') as HTMLLinkElement;
+      link.href = mapCanvas.toDataURL();
+      link.click();
+      // mapCanvas.toBlob((bolb) => {
+      //   link.href = URL.createObjectURL(bolb);
+      //   link.click();
+      // })
+    });
+    this.map.renderSync();
+  }
 }

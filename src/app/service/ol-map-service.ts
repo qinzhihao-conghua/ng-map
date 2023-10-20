@@ -233,7 +233,7 @@ export class OlMapService {
    * @returns 返回any防止ts报错
    */
   private createTileSource(sourceType: string, sourceUrl: string) {
-    let source_options: any = { url: sourceUrl };
+    let source_options: any = { url: sourceUrl, crossOrigin: 'anonymous' };
     let source: any = null;
     if (sourceType === 'XYZ') {
       source = new XYZ(source_options);

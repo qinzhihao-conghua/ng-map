@@ -9,6 +9,7 @@ import { AreaMapNewComponent } from './area-map-new/area-map-new.component';
 import { FormsModule } from '@angular/forms';
 import { MapabcComponent } from './mapabc/mapabc.component';
 import { MinemapComponent } from './minemap/minemap.component';
+import { ImageMapComponent } from './image-map/image-map.component';
 
 
 @NgModule({
@@ -18,7 +19,8 @@ import { MinemapComponent } from './minemap/minemap.component';
     OlServiceComponent,
     AreaMapNewComponent,
     MapabcComponent,
-    MinemapComponent
+    MinemapComponent,
+    ImageMapComponent
   ],
   imports: [
     CommonModule,
