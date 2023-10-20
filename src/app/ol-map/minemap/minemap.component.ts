@@ -15,6 +15,8 @@ export class MinemapComponent implements OnInit {
 
   constructor() { }
 
+  map: Map;
+
   ngOnInit(): void {
   }
 
@@ -72,7 +74,10 @@ export class MinemapComponent implements OnInit {
       pitchWithRotate: false,
       scrollZoom: false,
       touchZoomRotate: false,
+      projection: 'MERCATOR'
     });
+    // var position = minemap.LngLat(113.545080, 22.194584); // 对象形式
+    // map.setCenter(position);
     return map;
   }
   olLayer(_map) {
@@ -88,8 +93,13 @@ export class MinemapComponent implements OnInit {
           canvas.style.opacity = opacity;
           // adjust view parameters in mapbox
           var rotation = viewState.rotation;
+          // var center = toLonLat(viewState.center);
+          // if (proj == enum_1.DSProjType.WGS84) {
+          //     center = viewState.center;
+          // }
           _map.jumpTo({
-            center: toLonLat(viewState.center),
+            // center: toLonLat(viewState.center),
+            center: viewState.center,
             zoom: viewState.zoom - 1,
             bearing: (-rotation * 180) / Math.PI,
             animate: false,
@@ -120,18 +130,24 @@ export class MinemapComponent implements OnInit {
 
     const mapabc = this.createMinemap(options);
     const layer = this.olLayer(mapabc);
-    new Map({
+    this.map = new Map({
       target: 'minemap',
       view: new View({
-        center: [13521355.046191009, 3662162.5765745],
+        // center: [13521355.046191009, 3662162.5765745],
+        center: [113.545080, 22.194584],
         maxZoom: 17,
         minZoom: 3,
-        projection: "EPSG:3857",
-        zoom: 12
+        // projection: "EPSG:3857",
+        projection: "EPSG:4326",
+        zoom: 10
       }),
       layers: [
         layer
       ]
+    });
+    this.map.on('click', (e) => {
+      console.log(e);
+      console.log(e.coordinate);
     })
   }
 

@@ -6,6 +6,7 @@ import { MinemapComponent } from './minemap/minemap.component';
 import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
 import { OlMapComponent } from './ol-map.component';
 import { OlServiceComponent } from './ol-service/ol-service.component';
+import { ImageMapComponent } from './image-map/image-map.component';
 
 
 const routes: Routes = [
@@ -18,6 +19,7 @@ const routes: Routes = [
       { path: 'new', component: AreaMapNewComponent },
       { path: 'mapabc', component: MapabcComponent },
       { path: 'minemap', component: MinemapComponent },
+      { path: 'image', component: ImageMapComponent },
       { path: '', redirectTo: 'ol-service', pathMatch: 'full' },
     ]
   }

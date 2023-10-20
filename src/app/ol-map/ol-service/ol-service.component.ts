@@ -48,7 +48,7 @@ export class OlServiceComponent implements OnInit {
       center: [108.316492, 22.818136],
       zoom: 12,
       maxZoom: 20,
-      minZoom: 6,
+      minZoom: 1,
       projection: 'EPSG:4326'
     };
     this.map = this.mapService.initMap('demo1', viewOptions);
@@ -167,5 +167,10 @@ export class OlServiceComponent implements OnInit {
   getAllFeatures() {
     this.mapService.getAllFeature()
   }
-
+  async test() {
+    let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
+    const result = await this.http.post(url, null).toPromise();
+    console.log('---------', result);
+    this.mapService.showPolygon(result);
+  }
 }
