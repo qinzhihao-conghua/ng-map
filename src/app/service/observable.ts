@@ -21,7 +21,7 @@ export class Observable<T> {
      * @param callback 回调方法
      * @returns 返回实例对象
      */
-    subscribe(callback: (t: any) => void) {
+    subscribe(callback: (t: T) => void) {
         let alreadyIn = this.subscribers.some(sub => sub == callback);
         if (!alreadyIn) {
             this.subscribers.push(callback);

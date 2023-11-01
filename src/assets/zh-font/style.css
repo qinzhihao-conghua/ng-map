@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'zh-font';
-  src:  url('fonts/zh-font.eot?ze8bvs');
-  src:  url('fonts/zh-font.eot?ze8bvs#iefix') format('embedded-opentype'),
-    url('fonts/zh-font.ttf?ze8bvs') format('truetype'),
-    url('fonts/zh-font.woff?ze8bvs') format('woff'),
-    url('fonts/zh-font.svg?ze8bvs#zh-font') format('svg');
+  src:  url('fonts/zh-font.eot?xqh5ra');
+  src:  url('fonts/zh-font.eot?xqh5ra#iefix') format('embedded-opentype'),
+    url('fonts/zh-font.ttf?xqh5ra') format('truetype'),
+    url('fonts/zh-font.woff?xqh5ra') format('woff'),
+    url('fonts/zh-font.svg?xqh5ra#zh-font') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -51,4 +51,7 @@
 }
 .icon-radio-unchecked:before {
   content: "\ea5f";
+}
+.icon-download:before {
+  content: "\e9c7";
 }
