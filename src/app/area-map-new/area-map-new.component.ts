@@ -3,13 +3,17 @@ import { Map } from 'ol';
 import Feature from 'ol/Feature';
 import { ViewOptions } from 'ol/View';
 import { Style, Icon } from 'ol/style';
-import { OlMapService } from '../../service/ol-map-service';
+import { OlMapService } from '../service/ol-map-service';
+import { HttpClient } from '@angular/common/http';
+import { GeoJSON } from 'ol/format';
+import Point from 'ol/geom/Point';
 declare var turf: any;
 
 @Component({
   selector: 'area-map-new',
   templateUrl: './area-map-new.component.html',
-  styleUrls: ['./area-map-new.component.scss']
+  styleUrls: ['./area-map-new.component.scss'],
+  // providers: [OlMapService]
 })
 export class AreaMapNewComponent implements OnInit {
 
@@ -17,7 +21,10 @@ export class AreaMapNewComponent implements OnInit {
    * 覃智浩 2022年10月11日 14:53:36
    * 新巡区地图绘制组件，使用的service也是重写的OlMapService
    */
-  constructor() { }
+  constructor(
+    private http: HttpClient,
+    // private mapService: OlMapService,
+  ) { }
 
   /**传递进来要上图的geojson数据 */
   @Input() geojsonData: any;
@@ -50,7 +57,30 @@ export class AreaMapNewComponent implements OnInit {
   currentStrokeColor: string = '#E80505';
   currentFillColor: string = 'rgba(255, 255, 255, 0.5)';
 
+
+  coordinate: number[] = [];
+  geojson: {
+    Points: Array<any>,
+    line: object,
+    Polygon: object,
+    Square: object,
+    Box: object,
+    Circle: object,
+    HeatData: object,
+    route: Array<any>
+  };
+  // map: Map;
+  markText = '开始移动';
+  heatMapLayer = null;
+  clusterMapLayer = null;
+  markerAnimationLayer = null;
+  markDisabled = true;
+
   ngOnInit() {
+    this.http.get('../../assets/geojson-collection.json').subscribe(data => {
+      this.geojson = data as any;
+      console.log('geojson数据', data);
+    });
   }
   ngAfterViewInit() {
     this.initMap();
@@ -66,10 +96,11 @@ export class AreaMapNewComponent implements OnInit {
   }
   initMap() {
     const viewOptions: ViewOptions = {
-      center: [121.471325, 31.231929],
+      // center: [121.471325, 31.231929],
+      center: [108.316492, 22.818136],
       zoom: 12,
-      maxZoom: 18,
-      minZoom: 6,
+      maxZoom: 20,
+      minZoom: 1,
       projection: 'EPSG:4326'
     };
     this.mapInstance = new OlMapService();
@@ -259,5 +290,127 @@ export class AreaMapNewComponent implements OnInit {
       // })
     });
     this.map.renderSync();
+  }
+
+  // 2023年11月1日16:59:47
+  openPopup() {
+    this.mapInstance.clearInteraction();
+    this.mapInstance.clickToGetFeature().subscribe(data => {
+      // this.coordinate = data.coordinate;
+      // 这种方式展示popup不是很理想，比较理想的方式是通过select去获取，但是需要多处理一些
+      // const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
+      console.log('点击返回', data);
+      // if (features.length > 0) {
+      console.log('features属性', data.getProperties());
+      console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      const dom = document.getElementById('popup');
+      dom.style.display = 'block';
+      const content = document.getElementById('popup-content');
+      content.innerHTML = `
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+          `;
+      // this.mapInstance.showPopup(dom, data.coordinate, 'test');
+      // }
+    });
+  }
+  closePopupBtn() {
+    this.mapInstance.closeClickEvent();
+    this.mapInstance.closeOverlay('test');
+  }
+  addInteractions(type: string) {
+    this.mapInstance.addInteractions(type).subscribe((data: string) => {
+      console.log('绘制结果', JSON.parse(data));
+    });
+  }
+  deleteLayer() {
+    this.mapInstance.deleteLayer().subscribe(data => {
+      console.log('删除结果', data);
+    });
+  }
+  clearLayer() {
+    this.closeHeatMap();
+    this.closeClusterMap();
+    this.closeMarkerAnimation();
+    this.mapInstance.clearLayer();
+  }
+  addPoint() {
+    this.mapInstance.showPoint(this.geojson.Points);
+  }
+  showPolyline() {
+    this.mapInstance.showPolyline(this.geojson.line);
+  }
+  showPolygon() {
+    this.mapInstance.showPolygon(this.geojson.Polygon);
+  }
+  showCircle() {
+    // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
+    this.mapInstance.showPolygon(this.geojson.Circle);
+  }
+  showSquare() {
+    this.mapInstance.showSquare(this.geojson.Square);
+  }
+  clearInteraction() {
+    this.mapInstance.clearInteraction();
+  }
+  editLayer() {
+    this.mapInstance.editLayer().subscribe(data => {
+      console.log('编辑结果', data);
+    });
+  }
+
+  showHeatMap() {
+    this.heatMapLayer = this.mapInstance.showHeatMap(this.geojson.HeatData[0]);
+  }
+  closeHeatMap() {
+    this.mapInstance.closeHeatMap(this.heatMapLayer);
+  }
+  showClusterMap() {
+    const features = []
+    for (let i = 0; i < 20000; ++i) {
+      const coordinates = [108 + Math.random(), 22 + Math.random()];
+      features[i] = new Feature(new Point(coordinates));
+    }
+    const result = this.mapInstance.showClusterMap(features);
+    this.clusterMapLayer = result.layer;
+  }
+  closeClusterMap() {
+    this.mapInstance.closeClusterMap(this.clusterMapLayer)
+  }
+  markerAnimation() {
+    this.markDisabled = false;
+    this.markerAnimationLayer = this.mapInstance.markerAnimation(this.geojson.route);
+  }
+  closeMarkerAnimation() {
+    this.mapInstance.closeMarkerAnimation(this.markerAnimationLayer)
+  }
+  changeAnimation() {
+    if (this.markDisabled) {
+      this.mapInstance.stopAnimation();
+      this.markText = '开始移动'
+      this.markDisabled = !this.markDisabled;
+    } else {
+      this.markText = '停止移动';
+      this.mapInstance.startAnimation();
+      this.markDisabled = !this.markDisabled;
+    }
+  }
+  mapClick() {
+    const points = [];
+    this.mapInstance.clickToGetFeature().subscribe(data => {
+      // points.push(data.coordinate)
+      console.log('点击返回', data);
+    })
+  }
+  getAllFeatures() {
+    this.mapInstance.getAllFeature()
+  }
+  async test() {
+    let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
+    const result = await this.http.post(url, null).toPromise();
+    console.log('---------', result);
+    this.mapInstance.showPolygon(result);
   }
 }
