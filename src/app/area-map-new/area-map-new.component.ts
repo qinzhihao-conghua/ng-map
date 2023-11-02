@@ -7,7 +7,7 @@ import { OlMapService } from '../service/ol-map-service';
 import { HttpClient } from '@angular/common/http';
 import { GeoJSON } from 'ol/format';
 import Point from 'ol/geom/Point';
-declare var turf: any;
+import * as turf from '@turf/turf';
 
 @Component({
   selector: 'area-map-new',
@@ -75,6 +75,13 @@ export class AreaMapNewComponent implements OnInit {
   clusterMapLayer = null;
   markerAnimationLayer = null;
   markDisabled = true;
+  fontType: Array<string> = ['宋体', '微软雅黑', '仿宋', '黑体', '方正', '华文隶书', '等线', '华文行楷', 'sans-serif'];
+  lineDashType: Array<any> = [
+    { key: '1', code: [], value: '—————' },
+    { key: '2', code: [5, 5], value: '...................' },
+    { key: '3', code: [10, 10], value: '----------' },
+    { key: '4', code: [20, 5], value: '— — —  ' }
+  ];
 
   ngOnInit() {
     this.http.get('../../assets/geojson-collection.json').subscribe(data => {
@@ -108,7 +115,6 @@ export class AreaMapNewComponent implements OnInit {
   }
   draw(type: string) {
     this.acticeType = type;
-    this.closePanel();
     this.mapInstance.closeClickEvent();
     switch (type) {
       case 'Point':
@@ -119,7 +125,7 @@ export class AreaMapNewComponent implements OnInit {
         this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
           this.activeFeature(data);
           setTimeout(() => {
-            this.setStyle();
+            this.setProperty();
           }, 300);
           // 单独返回这个巡区
           // const geojson = this.mapInstance.featuresToGeojson([data]);
@@ -155,7 +161,7 @@ export class AreaMapNewComponent implements OnInit {
     }
   }
   closePanel() {
-    this.hiddenPanel = true;
+    this.hiddenPanel = false;
     this.layerDesc = null;
     this.layerName = null;
     this.currentStrokeColor = '#E80505';
@@ -167,6 +173,7 @@ export class AreaMapNewComponent implements OnInit {
     } else {
       this.currentFillColor = color;
     }
+    this.setProperty();
   }
   /**
    * 激活当前图层
@@ -174,13 +181,13 @@ export class AreaMapNewComponent implements OnInit {
    */
   activeFeature(feature: Feature) {
     this.currentFeature = feature;
-    this.hiddenPanel = false;
+    this.hiddenPanel = true;
     // if (this.currentFeature) {
     //   (this.currentFeature.getStyle() as Style).getStroke().setColor('#2196f3');
     //   this.currentFeature.changed();
     // }
   }
-  setStyle() {
+  setProperty() {
     const style = {
       strokeColor: this.currentStrokeColor,
       fillColor: this.currentFillColor,
@@ -232,9 +239,6 @@ export class AreaMapNewComponent implements OnInit {
 
     center = center ? center : turf.center(features).geometry.coordinates;
     this.mapInstance.showPopup(dom, center, this.currentPopuId)
-  }
-  closePopup() {
-    this.mapInstance.closeOverlay(this.currentPopuId)
   }
   exportPng() {
     // postcompose rendercomplete
@@ -312,11 +316,13 @@ export class AreaMapNewComponent implements OnInit {
             <p>测试popup</p>
             <p>测试popup</p>
           `;
-      // this.mapInstance.showPopup(dom, data.coordinate, 'test');
+      // @ts-ignore
+      const center = turf.center(JSON.parse(new GeoJSON().writeFeature(data))).geometry.coordinates;
+      this.mapInstance.showPopup(dom, center, 'test');
       // }
     });
   }
-  closePopupBtn() {
+  closePopup() {
     this.mapInstance.closeClickEvent();
     this.mapInstance.closeOverlay('test');
   }
@@ -405,7 +411,8 @@ export class AreaMapNewComponent implements OnInit {
     })
   }
   getAllFeatures() {
-    this.mapInstance.getAllFeature()
+    const result = this.mapInstance.getAllFeature();
+    console.log('获取的所有图层', result);
   }
   async test() {
     let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
