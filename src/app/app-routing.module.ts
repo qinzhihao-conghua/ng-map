@@ -12,7 +12,7 @@ const routes: Routes = [
   { path: 'mapabc', component: MapabcComponent },
   { path: 'minemap', component: MinemapComponent },
   { path: 'image', component: ImageMapComponent },
-  { path: '', redirectTo: 'ol-service', pathMatch: 'full' }
+  { path: '', redirectTo: 'new', pathMatch: 'full' }
 ];
 
 @NgModule({
