@@ -1,6 +1,27 @@
 <div class="option">
   <header>
-    <a [routerLink]="['/ol']">openlayer模块</a>
+    <a class="module-name">openlayer模块</a>
   </header>
+  <div class="main-container">
+    <ul class="left">
+      <li class="list-item">
+        <a [routerLink]="['./bd-map']">openlayer-百度</a>
+      </li>
+      <li class="list-item">
+        <a [routerLink]="['./new']">new-service</a>
+      </li>
+      <li class="list-item">
+        <a [routerLink]="['./mapabc']">mapabc地图</a>
+      </li>
+      <li class="list-item">
+        <a [routerLink]="['./minemap']">minemap四维图新地图</a>
+      </li>
+      <li class="list-item">
+        <a [routerLink]="['./image']">图片地图</a>
+      </li>
+    </ul>
+    <div class="right">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
 </div>
-<router-outlet></router-outlet>
