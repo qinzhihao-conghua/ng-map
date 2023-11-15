@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { OlServiceComponent } from './ol-service.component';
+import { ImageMapComponent } from './image-map.component';
 
-describe('OlServiceComponent', () => {
-  let component: OlServiceComponent;
-  let fixture: ComponentFixture<OlServiceComponent>;
+describe('ImageMapComponent', () => {
+  let component: ImageMapComponent;
+  let fixture: ComponentFixture<ImageMapComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ OlServiceComponent ]
+      declarations: [ ImageMapComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(OlServiceComponent);
+    fixture = TestBed.createComponent(ImageMapComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

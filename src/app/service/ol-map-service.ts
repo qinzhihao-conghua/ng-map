@@ -42,7 +42,8 @@ import IconAnchorUnits from 'ol/style/IconAnchorUnits';
 import { defaults as olDefaults } from 'ol/interaction';
 import GeometryType from 'ol/geom/GeometryType';
 import { Observable } from './observable';
-
+import OverlayPositioning from 'ol/OverlayPositioning';
+import { getArea, getLength } from 'ol/sphere';
 
 /**
  * 底图基本信息
@@ -152,6 +153,7 @@ export class OlMapService {
   // 水纹动画keys
   animateKeys = [];
   clickKey = [];
+  pointermoveEvent;
   private otherTest = {
     sourceUrl: 'http://114.215.146.210:25003/v3/tile?x={x}&y={y}&z={z}',
     projection: 'EPSG:4326',
@@ -233,7 +235,7 @@ export class OlMapService {
    * @returns 返回any防止ts报错
    */
   private createTileSource(sourceType: string, sourceUrl: string) {
-    let source_options: any = { url: sourceUrl };
+    let source_options: any = { url: sourceUrl, crossOrigin: 'anonymous' };
     let source: any = null;
     if (sourceType === 'XYZ') {
       source = new XYZ(source_options);
@@ -342,12 +344,12 @@ export class OlMapService {
    * @param isGeojson 是否返回geojson，默认是true
    * @returns 根据传入条件返回geojson或feature
    */
-  addInteractions(type: any, text?: string, imageUrl?: string, succession?: boolean, isGeojson: boolean = true): Observable<any> {
+  addInteractions(type: any, text?: string, imageUrl?: string, succession?: boolean, isGeojson: boolean = true): Observable<string | Feature<Geometry>> {
     if (type !== 'None') {
       this.clearInteraction();
       // 
       // const subject = new Subject();
-      const subject = new Observable();
+      const subject = new Observable<string | Feature<Geometry>>();
       let drawType = type;
       let geometryFunction;
       let style = (this.vector.getStyle() as Style);
@@ -367,8 +369,35 @@ export class OlMapService {
       });
       this.map.addInteraction(this.draw);
       this.backout();
+      this.createHelpTooltip();
+      this.createMeasureTooltip();
       this.snap = new Snap({ source: this.source });
       this.modify = new Modify({ source: this.source });
+      this.draw.on('drawstart', (evt) => {
+        // set sketch
+        this.sketch = evt.feature;
+
+        /** @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
+        // @ts-ignore
+        let tooltipCoord = evt.coordinate;
+        let listener;
+        listener = this.sketch.getGeometry().on('change', (change) => {
+          const geom = change.target;
+          let output;
+          if (geom instanceof Polygon) {
+            output = this.formatArea(geom);
+            // output = geom.getArea() + '---' + getArea(geom);
+
+            tooltipCoord = geom.getInteriorPoint().getCoordinates();
+          } else if (geom instanceof LineString) {
+            output = this.formatLength(geom);
+            // output = geom.getLength() + '---' + getLength(geom);
+            tooltipCoord = geom.getLastCoordinate();
+          }
+          this.measureTooltipElement.innerHTML = output;
+          this.measureTooltip.setPosition(tooltipCoord);
+        });
+      });
       this.draw.on('drawend', (e) => {
         const result = this.drawendHandle(e, type, text, imageUrl, isGeojson);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
@@ -377,6 +406,7 @@ export class OlMapService {
         }
         subject.next(result);
       });
+      this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
       return subject;
     }
   }
@@ -389,7 +419,7 @@ export class OlMapService {
    * @param isGeojson 是否返回geojson，默认是true
    * @returns 根据传入条件返回geojson或feature
    */
-  drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string, isGeojson: boolean = true) {
+  drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string, isGeojson: boolean = true): Feature<Geometry> | string {
     let style = this.createStyle(this.plotStyle);
     let { textOffsetY } = this.plotStyle;
     e.feature.setStyle(style);
@@ -447,7 +477,7 @@ export class OlMapService {
    * @returns 
    */
   featuresToGeojson(features: Array<Feature>) {
-    let geoJSON: any; //= new GeoJSON().writeFeature(feature);
+    let geoJSON: string; //= new GeoJSON().writeFeature(feature);
     const featuresCache = [];
     features.forEach(item => {
       const type = item.getGeometry().getType();
@@ -535,6 +565,8 @@ export class OlMapService {
     this.map.removeInteraction(this.highlight);
     this.map.removeInteraction(this.layerForDelete);
     unByKey(this.deleteEventKey);
+    unByKey(this.pointermoveEvent);
+    this.helpTooltipElement && this.helpTooltipElement.classList.add('hidden');
     document.onkeypress = () => { };
   }
 
@@ -552,10 +584,10 @@ export class OlMapService {
   /**
    * 点击删除图层
    */
-  deleteLayer(): Observable<any> {
+  deleteLayer(): Observable<SelectEvent> {
     this.clearInteraction();
     // const subject = new Subject();
-    const subject = new Observable();
+    const subject = new Observable<SelectEvent>();
     // 移入高亮
     this.highlight = new Select({ condition: pointerMove });
     this.layerForDelete = new Select();
@@ -1051,4 +1083,131 @@ export class OlMapService {
     this.markObj.geoMarker.setGeometry(this.markObj.position);
     this.markObj.vectorLayer.un('postrender', this.moveFeature);
   }
+  /**
+ * Currently drawn feature.
+ * @type {import("../src/ol/Feature.js").default}
+ */
+  sketch: Feature;
+
+  /**
+   * The help tooltip element.
+   * @type {HTMLElement}
+   */
+  helpTooltipElement: HTMLElement;
+
+  /**
+   * Overlay to show the help messages.
+   * @type {Overlay}
+   */
+  helpTooltip: Overlay;
+
+  /**
+   * The measure tooltip element.
+   * @type {HTMLElement}
+   */
+  measureTooltipElement: HTMLElement;
+
+  /**
+   * Overlay to show the measurement.
+   * @type {Overlay}
+   */
+  measureTooltip: Overlay;
+
+  /**
+   * Message to show when the user is drawing a polygon.
+   * @type {string}
+   */
+  continuePolygonMsg: string = 'Click to continue drawing the polygon';
+
+  /**
+   * Message to show when the user is drawing a line.
+   * @type {string}
+   */
+  continueLineMsg: string = 'Click to continue drawing the line';
+  pointerMoveHandler = (evt) => {
+    if (evt.dragging) {
+      return;
+    }
+    /** @type {string} */
+    let helpMsg = 'Click to start drawing';
+
+    if (this.sketch) {
+      const geom = this.sketch.getGeometry();
+      if (geom instanceof Polygon) {
+        helpMsg = this.continuePolygonMsg;
+      } else if (geom instanceof LineString) {
+        helpMsg = this.continueLineMsg;
+      }
+    }
+
+    this.helpTooltipElement.innerHTML = helpMsg;
+    this.helpTooltip.setPosition(evt.coordinate);
+    this.helpTooltipElement.classList.remove('hidden');
+  };
+  /**
+ * Creates a new help tooltip
+ */
+  createHelpTooltip() {
+    if (this.helpTooltipElement) {
+      this.helpTooltipElement.parentNode.removeChild(this.helpTooltipElement);
+    }
+    this.helpTooltipElement = document.createElement('div');
+    this.helpTooltipElement.className = 'ol-tooltip hidden';
+    this.helpTooltip = new Overlay({
+      element: this.helpTooltipElement,
+      offset: [15, 0],
+      // positioning: 'center-left',
+      positioning: OverlayPositioning.CENTER_LEFT
+    });
+    this.map.addOverlay(this.helpTooltip);
+  }
+  /**
+   * Creates a new measure tooltip
+   */
+  createMeasureTooltip() {
+    if (this.measureTooltipElement) {
+      this.measureTooltipElement.parentNode.removeChild(this.measureTooltipElement);
+    }
+    this.measureTooltipElement = document.createElement('div');
+    this.measureTooltipElement.className = 'ol-tooltip ol-tooltip-measure';
+    this.measureTooltip = new Overlay({
+      element: this.measureTooltipElement,
+      offset: [0, -15],
+      positioning: OverlayPositioning.CENTER_LEFT,
+      stopEvent: false,
+      insertFirst: false,
+    });
+    this.map.addOverlay(this.measureTooltip);
+  }
+  /**
+ * Format length output.
+ * @param {LineString} line The line.
+ * @return {string} The formatted length.
+ */
+  formatLength(line) {
+    const length = getLength(line, { projection: 'EPSG:4326'/*, radius: 6371008.8*/ });
+    let output;
+    if (length > 100) {
+      output = Math.round((length / 1000) * 100) / 100 + ' ' + 'km';
+    } else {
+      output = Math.round(length * 100) / 100 + ' ' + 'm';
+    }
+    return output;
+  };
+
+  /**
+   * Format area output.
+   * @param {Polygon} polygon The polygon.
+   * @return {string} Formatted area.
+   */
+  formatArea(polygon) {
+    const area = getArea(polygon, { projection: 'EPSG:4326'/*, radius: 6371008.8*/ });
+    let output;
+    if (area > 10000) {
+      output = Math.round((area / 1000000) * 100) / 100 + ' ' + 'km<sup>2</sup>';
+    } else {
+      output = Math.round(area * 100) / 100 + ' ' + 'm<sup>2</sup>';
+    }
+    return output;
+  };
 }

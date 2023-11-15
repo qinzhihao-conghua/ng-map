@@ -1,0 +1,416 @@
+import { Component, EventEmitter, Input, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Map } from 'ol';
+import Feature from 'ol/Feature';
+import { ViewOptions } from 'ol/View';
+import { Style, Icon } from 'ol/style';
+import { OlMapService } from '../service/ol-map-service';
+import { HttpClient } from '@angular/common/http';
+import { GeoJSON } from 'ol/format';
+import Point from 'ol/geom/Point';
+declare var turf: any;
+
+@Component({
+  selector: 'area-map-new',
+  templateUrl: './area-map-new.component.html',
+  styleUrls: ['./area-map-new.component.scss'],
+  // providers: [OlMapService]
+})
+export class AreaMapNewComponent implements OnInit {
+
+  /**
+   * 覃智浩 2022年10月11日 14:53:36
+   * 新巡区地图绘制组件，使用的service也是重写的OlMapService
+   */
+  constructor(
+    private http: HttpClient,
+    // private mapService: OlMapService,
+  ) { }
+
+  /**传递进来要上图的geojson数据 */
+  @Input() geojsonData: any;
+  /**展示右侧工具 */
+  @Input() showTools = true;
+  /**绘制后返回的这个feature */
+  @Output() drawBackFeature = new EventEmitter();
+  /**绘制后返回图上所有features */
+  @Output() drawBackAllFeatures = new EventEmitter();
+
+  map: Map;
+  acticeType: string = null;
+  mapInstance: OlMapService = null;
+  currentPopuId: string = null;
+  hiddenPanel: boolean = true;
+  currentFeature: Feature = null;
+  layerDesc: string = null;
+  layerName: string = null;
+  strokeColors: Array<string> = ['#E80505', '#FCCF31', '#F8D800', '#49C628', '#32CCBC', '#0396FF', '#3813C2'];
+  fillColors: Array<string> = [
+    'rgba(255, 255, 255, .5)',
+    'rgba(232, 5, 5, .3)',
+    'rgba(252, 207, 49, .3)',
+    'rgba(248, 215, 0, .3)',
+    'rgba(74, 198, 40, .3)',
+    'rgba(50, 204, 189, .3',
+    'rgba(3, 150, 255, .3)',
+    'rgba(57, 19, 194, .3)'
+  ];
+  currentStrokeColor: string = '#E80505';
+  currentFillColor: string = 'rgba(255, 255, 255, 0.5)';
+
+
+  coordinate: number[] = [];
+  geojson: {
+    Points: Array<any>,
+    line: object,
+    Polygon: object,
+    Square: object,
+    Box: object,
+    Circle: object,
+    HeatData: object,
+    route: Array<any>
+  };
+  // map: Map;
+  markText = '开始移动';
+  heatMapLayer = null;
+  clusterMapLayer = null;
+  markerAnimationLayer = null;
+  markDisabled = true;
+
+  ngOnInit() {
+    this.http.get('../../assets/geojson-collection.json').subscribe(data => {
+      this.geojson = data as any;
+      console.log('geojson数据', data);
+    });
+  }
+  ngAfterViewInit() {
+    this.initMap();
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes.geojsonData && changes.geojsonData.currentValue) {
+      console.log('回显数据', this.geojsonData);
+      this.mapInstance.showPolygon(this.geojsonData);
+    }
+    if (changes.showTools && !changes.showTools.currentValue) {
+      this.closePanel();
+    }
+  }
+  initMap() {
+    const viewOptions: ViewOptions = {
+      // center: [121.471325, 31.231929],
+      center: [108.316492, 22.818136],
+      zoom: 12,
+      maxZoom: 20,
+      minZoom: 1,
+      projection: 'EPSG:4326'
+    };
+    this.mapInstance = new OlMapService();
+    this.map = this.mapInstance.initMap('map-container', viewOptions);
+  }
+  draw(type: string) {
+    this.acticeType = type;
+    this.closePanel();
+    this.mapInstance.closeClickEvent();
+    switch (type) {
+      case 'Point':
+      case 'LineString':
+      case 'Polygon':
+      case 'Circle':
+        const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
+        this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
+          this.activeFeature(data);
+          setTimeout(() => {
+            this.setStyle();
+          }, 300);
+          // 单独返回这个巡区
+          // const geojson = this.mapInstance.featuresToGeojson([data]);
+          // this.drawBackFeature.emit(geojson);
+        });
+        break;
+      case 'delete':
+        this.mapInstance.deleteLayer().subscribe(data => {
+          console.log('删除结果', data)
+        })
+        break;
+      case 'clear':
+        this.mapInstance.clearLayer();
+        break;
+      case 'hand':
+        this.mapInstance.clickToGetFeature().subscribe(data => {
+          const pro = data.getProperties();
+          console.log('点击获取的要素', data, pro);
+          this.layerDesc = pro.desc;
+          this.layerName = pro.name;
+          this.activeFeature(data);
+        })
+        break;
+      case 'edit':
+        this.mapInstance.editLayer().subscribe(data => {
+          console.log('编辑后的要素', data);
+          this.drawBackAllFeatures.emit(data);
+        })
+        break;
+      case null:
+        this.mapInstance.clearInteraction();
+        break;
+    }
+  }
+  closePanel() {
+    this.hiddenPanel = true;
+    this.layerDesc = null;
+    this.layerName = null;
+    this.currentStrokeColor = '#E80505';
+    this.currentFillColor = 'rgba(255, 255, 255, 0.5)';
+  }
+  chooseColor(color: string, type: string) {
+    if (type === 'stroke') {
+      this.currentStrokeColor = color;
+    } else {
+      this.currentFillColor = color;
+    }
+  }
+  /**
+   * 激活当前图层
+   * @param feature 
+   */
+  activeFeature(feature: Feature) {
+    this.currentFeature = feature;
+    this.hiddenPanel = false;
+    // if (this.currentFeature) {
+    //   (this.currentFeature.getStyle() as Style).getStroke().setColor('#2196f3');
+    //   this.currentFeature.changed();
+    // }
+  }
+  setStyle() {
+    const style = {
+      strokeColor: this.currentStrokeColor,
+      fillColor: this.currentFillColor,
+      text: this.layerName,
+      pointImageUrl: 'assets/img/location.png'
+    }
+    const properties = {
+      name: this.layerName,
+      desc: this.layerDesc,
+      style
+    }
+    this.mapInstance.setFeatureStyle(this.currentFeature, style, properties);
+    this.currentFeature.changed();
+
+    const features = this.mapInstance.getAllFeature();
+    let geojsonBack = this.mapInstance.featuresToGeojson(features);
+    this.drawBackAllFeatures.emit(geojsonBack);
+  }
+  addPopup(data) {
+    let center = null;
+    let json = null;
+    if (data.type === 'Circle') {
+      center = data.center;
+    } else {
+      json = JSON.parse(data);
+    }
+    console.log('绘制结果', json);
+    const dom = document.getElementById('popup');
+    dom.style.display = 'block';
+    const content = document.getElementById('popup-content');
+    content.innerHTML = `
+        <p>测试popup</p>
+        <p>测试popup</p>
+      `;
+    this.currentPopuId = this.mapInstance.newGuid();
+    let temp = [];
+    if (json && json.geometry.type === 'LineString') {
+      json.geometry.coordinates.forEach(item => {
+        temp.push(turf.point(item))
+      })
+    } else if (json && json.geometry.type === 'Polygon') {
+      json.geometry.coordinates[0].forEach(item => {
+        temp.push(turf.point(item))
+      })
+    } else if (json) {
+      temp.push(turf.point(json.geometry.coordinates))
+    }
+    const features = turf.featureCollection(temp);
+
+    center = center ? center : turf.center(features).geometry.coordinates;
+    this.mapInstance.showPopup(dom, center, this.currentPopuId)
+  }
+  closePopup() {
+    this.mapInstance.closeOverlay(this.currentPopuId)
+  }
+  exportPng() {
+    // postcompose rendercomplete
+    this.map.once('rendercomplete', () => {
+      const mapCanvas = document.createElement('canvas');
+      const size = this.map.getSize();
+      mapCanvas.width = size[0];
+      mapCanvas.height = size[1];
+      const mapContext = mapCanvas.getContext('2d');
+      Array.prototype.forEach.call(
+        this.map.getViewport().querySelectorAll('.ol-layer canvas, canvas.ol-layer'),
+        (canvas: HTMLCanvasElement) => {
+          if (canvas.width > 0) {
+            // canvas.setAttribute("crossOrigin", 'Anonymous')
+            // @ts-ignore
+            const opacity = canvas.parentNode.style.opacity || canvas.style.opacity;
+            mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+            let matrix;
+            const transform = canvas.style.transform;
+            if (transform) {
+              // Get the transform parameters from the style's transform matrix
+              matrix = transform.match(/^matrix\(([^\(]*)\)$/)[1].split(',').map(Number);
+            } else {
+              matrix = [
+                parseFloat(canvas.style.width) / canvas.width,
+                0,
+                0,
+                parseFloat(canvas.style.height) / canvas.height,
+                0,
+                0,
+              ];
+            }
+            // Apply the transform to the export map context
+            CanvasRenderingContext2D.prototype.setTransform.apply(mapContext, matrix);
+            // @ts-ignore
+            const backgroundColor = canvas.parentNode.style.backgroundColor;
+            if (backgroundColor) {
+              mapContext.fillStyle = backgroundColor;
+              mapContext.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            mapContext.drawImage(canvas, 0, 0);
+          }
+        }
+      );
+      mapContext.globalAlpha = 1;
+      mapContext.setTransform(1, 0, 0, 1, 0, 0);
+      const link = document.getElementById('image-download') as HTMLLinkElement;
+      link.href = mapCanvas.toDataURL();
+      link.click();
+      // mapCanvas.toBlob((bolb) => {
+      //   link.href = URL.createObjectURL(bolb);
+      //   link.click();
+      // })
+    });
+    this.map.renderSync();
+  }
+
+  // 2023年11月1日16:59:47
+  openPopup() {
+    this.mapInstance.clearInteraction();
+    this.mapInstance.clickToGetFeature().subscribe(data => {
+      // this.coordinate = data.coordinate;
+      // 这种方式展示popup不是很理想，比较理想的方式是通过select去获取，但是需要多处理一些
+      // const features = this.map.getFeaturesAtPixel(data.pixel, { hitTolerance: 1 });
+      console.log('点击返回', data);
+      // if (features.length > 0) {
+      console.log('features属性', data.getProperties());
+      console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      const dom = document.getElementById('popup');
+      dom.style.display = 'block';
+      const content = document.getElementById('popup-content');
+      content.innerHTML = `
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+            <p>测试popup</p>
+          `;
+      // this.mapInstance.showPopup(dom, data.coordinate, 'test');
+      // }
+    });
+  }
+  closePopupBtn() {
+    this.mapInstance.closeClickEvent();
+    this.mapInstance.closeOverlay('test');
+  }
+  addInteractions(type: string) {
+    this.mapInstance.addInteractions(type).subscribe((data: string) => {
+      console.log('绘制结果', JSON.parse(data));
+    });
+  }
+  deleteLayer() {
+    this.mapInstance.deleteLayer().subscribe(data => {
+      console.log('删除结果', data);
+    });
+  }
+  clearLayer() {
+    this.closeHeatMap();
+    this.closeClusterMap();
+    this.closeMarkerAnimation();
+    this.mapInstance.clearLayer();
+  }
+  addPoint() {
+    this.mapInstance.showPoint(this.geojson.Points);
+  }
+  showPolyline() {
+    this.mapInstance.showPolyline(this.geojson.line);
+  }
+  showPolygon() {
+    this.mapInstance.showPolygon(this.geojson.Polygon);
+  }
+  showCircle() {
+    // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
+    this.mapInstance.showPolygon(this.geojson.Circle);
+  }
+  showSquare() {
+    this.mapInstance.showSquare(this.geojson.Square);
+  }
+  clearInteraction() {
+    this.mapInstance.clearInteraction();
+  }
+  editLayer() {
+    this.mapInstance.editLayer().subscribe(data => {
+      console.log('编辑结果', data);
+    });
+  }
+
+  showHeatMap() {
+    this.heatMapLayer = this.mapInstance.showHeatMap(this.geojson.HeatData[0]);
+  }
+  closeHeatMap() {
+    this.mapInstance.closeHeatMap(this.heatMapLayer);
+  }
+  showClusterMap() {
+    const features = []
+    for (let i = 0; i < 20000; ++i) {
+      const coordinates = [108 + Math.random(), 22 + Math.random()];
+      features[i] = new Feature(new Point(coordinates));
+    }
+    const result = this.mapInstance.showClusterMap(features);
+    this.clusterMapLayer = result.layer;
+  }
+  closeClusterMap() {
+    this.mapInstance.closeClusterMap(this.clusterMapLayer)
+  }
+  markerAnimation() {
+    this.markDisabled = false;
+    this.markerAnimationLayer = this.mapInstance.markerAnimation(this.geojson.route);
+  }
+  closeMarkerAnimation() {
+    this.mapInstance.closeMarkerAnimation(this.markerAnimationLayer)
+  }
+  changeAnimation() {
+    if (this.markDisabled) {
+      this.mapInstance.stopAnimation();
+      this.markText = '开始移动'
+      this.markDisabled = !this.markDisabled;
+    } else {
+      this.markText = '停止移动';
+      this.mapInstance.startAnimation();
+      this.markDisabled = !this.markDisabled;
+    }
+  }
+  mapClick() {
+    const points = [];
+    this.mapInstance.clickToGetFeature().subscribe(data => {
+      // points.push(data.coordinate)
+      console.log('点击返回', data);
+    })
+  }
+  getAllFeatures() {
+    this.mapInstance.getAllFeature()
+  }
+  async test() {
+    let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
+    const result = await this.http.post(url, null).toPromise();
+    console.log('---------', result);
+    this.mapInstance.showPolygon(result);
+  }
+}

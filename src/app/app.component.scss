@@ -1,10 +1,28 @@
 .option {
   width: 100%;
   margin: 0 auto;
-  a{
+
+  .module-name {
     padding: 12px;
     margin-right: 12px;
     background-color: aqua;
     display: inline-block;
+  }
+
+  .main-container {
+    display: flex;
+
+    .left {
+      width: 220px;
+
+      .list-item {
+        padding: 16px;
+      }
+    }
+
+    .right {
+      flex: 1;
+      height: 80vh;
+    }
   }
 }
