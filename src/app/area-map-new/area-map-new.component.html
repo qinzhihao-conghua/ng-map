@@ -14,54 +14,112 @@
     <span class="icon-download" title="导出图片" (click)="exportPng()"></span>
     <span class="icon-clean" title="清空" (click)="draw('clear')" [ngClass]="acticeType===''?'active':''"></span>
   </div>
-  <div class="properties-panel" [hidden]="hiddenPanel">
-    <ul>
-      <li>
-        <label>线条颜色</label>
-        <div class="color-container">
-          <span class="color-block"
-            [ngStyle]="{'background-color': item,'border-color':currentStrokeColor===item?'#000':'transparent'}"
-            *ngFor="let item of strokeColors;let i=index" (click)="chooseColor(item,'stroke')"></span>
+  <ul class="properties-panel" *ngIf="hiddenPanel">
+    <span class="close-panel" (click)="closePanel()">X</span>
+    <li class="setting-item">
+      <label>线条颜色</label>
+      <div class="color-container">
+        <span class="color-block"
+          [ngStyle]="{'background-color': item,'border-color':currentStrokeColor===item?'#000':'transparent'}"
+          *ngFor="let item of strokeColors;let i=index" (click)="chooseColor(item,'stroke')"></span>
+      </div>
+    </li>
+    <li class="setting-item">
+      <label>填充颜色</label>
+      <div class="color-container">
+        <span class="color-block"
+          [ngStyle]="{'background-color': item,'border-color':currentFillColor===item?'#000':'transparent'}"
+          *ngFor="let item of fillColors;let i=index" (click)="chooseColor(item,'fill')"></span>
+      </div>
+    </li>
+    <li class="setting-item">
+      <label>图层名称</label>
+      <input rows="4" nz-input [(ngModel)]="layerName" (input)="setProperty()" />
+    </li>
+    <li class="setting-item">
+      <label>图层描述</label>
+      <textarea rows="4" nz-input [(ngModel)]="layerDesc" (input)="setProperty()"></textarea>
+    </li>
+    <li class="setting-item column-item">
+      <label>字体设置</label>
+      <div class="item-style">
+        <div class="sub-item">
+          <label>字体</label>
+          <select>
+            <option *ngFor="let item of fontType">{{item}}</option>
+          </select>
         </div>
-      </li>
-      <li>
-        <label>填充颜色</label>
-        <div class="color-container">
-          <span class="color-block"
-            [ngStyle]="{'background-color': item,'border-color':currentFillColor===item?'#000':'transparent'}"
-            *ngFor="let item of fillColors;let i=index" (click)="chooseColor(item,'fill')"></span>
+        <div class="sub-item">
+          <label>字体大小</label>
+          <input type="number">
         </div>
-      </li>
-      <li>
-        <label>图层名称</label>
-        <input rows="4" nz-input [(ngModel)]="layerName" />
-      </li>
-      <li>
-        <label>图层描述</label>
-        <textarea rows="4" nz-input [(ngModel)]="layerDesc"></textarea>
-      </li>
-      <li style="justify-content: flex-end;">
-        <button nz-button nzSize="small" nzType="primary" (click)="closePanel()">关闭</button>
-        <button nz-button nzSize="small" nzType="primary" (click)="setStyle()">确定</button>
-      </li>
-    </ul>
-  </div>
+        <div class="sub-item">
+          <label>字体颜色</label>
+          <input type="color">
+        </div>
+        <div class="sub-item">
+          <label>字体粗细</label>
+          <input type="checkbox" value="bold">加粗
+        </div>
+        <div class="sub-item">
+          <label>字体倾斜</label>
+          <input type="checkbox" value="italic">倾斜
+        </div>
+      </div>
+    </li>
+    <li class="setting-item column-item">
+      <label>线条设置</label>
+      <div class="item-style">
+        <div class="sub-item">
+          <label>线型</label>
+          <select>
+            <option *ngFor="let item of lineDashType">{{item.value}}</option>
+          </select>
+        </div>
+        <div class="sub-item">
+          <label>线条粗细</label>
+          <input type="number">
+        </div>
+        <div class="sub-item">
+          <label>线条颜色</label>
+          <input type="color">
+        </div>
+        <div class="sub-item">
+          <label>线条透明度</label>
+          <input type="number">
+        </div>
+      </div>
+    </li>
+    <li class="setting-item column-item">
+      <label>填充设置</label>
+      <div class="item-style">
+        <div class="sub-item">
+          <label>填充颜色</label>
+          <input type="color">
+        </div>
+        <div class="sub-item">
+          <label>填充透明度</label>
+          <input type="number">
+        </div>
+      </div>
+    </li>
+  </ul>
   <div id="popup" class="ol-popup">
-    <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer icon-close1"></a>
+    <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer">X</a>
     <div id="popup-content"></div>
   </div>
   <a id="image-download" download="map.png"></a>
   <div class="map" id="map-container"></div>
 </div>
 <div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
-<button (click)="addInteractions('Point')">点</button>
+<!-- <button (click)="addInteractions('Point')">点</button>
 <button (click)="addInteractions('LineString')">线</button>
 <button (click)="addInteractions('Polygon')">面</button>
-<button (click)="addInteractions('Circle')">圆</button>
+<button (click)="addInteractions('Circle')">圆</button> -->
 <button (click)="addInteractions('Square')">正方形</button>
 <button (click)="addInteractions('Box')">长方形</button>
-<button (click)="deleteLayer()">单击删除图层</button>
-<button (click)="clearLayer()">全部清空</button>
+<!-- <button (click)="deleteLayer()">单击删除图层</button> -->
+<!-- <button (click)="clearLayer()">全部清空</button> -->
 <button (click)="addPoint()">撒点</button>
 <button (click)="showPolyline()">撒线</button>
 <button (click)="showPolygon()">撒面</button>
@@ -69,7 +127,7 @@
 <button (click)="showSquare()">撒正方形</button>
 <button (click)="clearInteraction()">关闭编辑/绘制</button>
 <button (click)="editLayer()">编辑</button>
-<button (click)="openPopup()">popup展示</button>
+<button (click)="openPopup()">popup展示,要点击feature</button>
 
 
 <button (click)="showHeatMap()">热力图</button>
