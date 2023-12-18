@@ -44,62 +44,8 @@ import GeometryType from 'ol/geom/GeometryType';
 import { Observable } from './observable';
 import OverlayPositioning from 'ol/OverlayPositioning';
 import { getArea, getLength } from 'ol/sphere';
+import { BaseStyle, ClusterStyle, LayerOption } from './base-type';
 
-/**
- * 底图基本信息
- */
-export interface LayerOption {
-  sourceUrl: string,
-  projection: string,
-  layerType: string,
-  sourceType: string
-}
-/**
- * 图形基本样式
- */
-export interface BaseStyle {
-  /**线条颜色 */
-  strokeColor?: string,
-  /**填充颜色 */
-  fillColor?: string,
-  /**线条宽度 */
-  lineWidth?: number,
-  /**虚线线条，传入则说明使用虚线线条 */
-  lineDash?: Array<number>
-  /**点颜色，与图片互斥 */
-  pointColor?: string,
-
-  /**坐标点图片地址，与点互斥 */
-  pointImageUrl?: string,
-  /**图片图标缩放比例 */
-  imageScal?: number,
-  /**图片锚点偏移，根据图片实际大小计算偏移值，单位为像素 */
-  imageAnchor?: Array<number>,
-
-  /**文本 */
-  text?: string,
-  /**文本缩放比例 */
-  textScale?: number,
-  /**文本对齐方式'left', 'right', 'center', 'end' or 'start' */
-  textAlign?: 'center',
-  /**文本基线'bottom', 'top', 'middle', 'alphabetic', 'hanging', 'ideographic' */
-  textBaseline?: 'top',
-  /**文本Y轴偏置 */
-  textOffsetY?: number,
-  /**文本X轴偏置 */
-  textOffsetX?: number,
-  /**文本填充颜色 */
-  textFillColor?: string,
-  /**文本线条颜色 */
-  textStrokeColor?: string,
-}
-/**聚合图样式 */
-export interface ClusterStyle {
-  radius?: number,
-  stroke?: string,
-  fill?: string,
-  textColor?: string
-}
 
 export class OlMapService {
   private map: Map;
@@ -292,43 +238,54 @@ export class OlMapService {
     });
   }
   /**
-   * 生成基本样式，只用于标绘时候
-   * TODO:剩余样式未处理，使用style.属性 | 默认值的方式
+   * 生成基本样式
    * @returns 
    */
   createStyle(style: BaseStyle): Style {
-    const { strokeColor, fillColor, pointColor, pointImageUrl, imageScal, lineWidth, lineDash, text } = style;
-    let image = null;
-    if (pointImageUrl) {
-      image = new Icon({
-        src: pointImageUrl,
-        // 图片缩放
-        scale: imageScal || .15
-      })
-    } else {
-      image = new CircleStyle({ // 作用于点标注
-        radius: 7,
+    if (style instanceof BaseStyle) {
+      const { fill, stroke, pointColor, image, text } = style;
+      let imageStyle = null;
+      if (image && image.src) {
+        imageStyle = new Icon({
+          src: image.src,
+          // 图片缩放
+          scale: image.scale || .15,
+          anchor: [0.5, 1],
+          crossOrigin: 'anonymous'
+        })
+      } else {
+        imageStyle = new CircleStyle({ // 作用于点标注
+          radius: 7,
+          fill: new Fill({
+            color: pointColor || '#03a9f4',
+          })
+        })
+      }
+      return new Style({
         fill: new Fill({
-          color: pointColor || '#03a9f4',
+          color: fill || 'rgba(255, 255, 255, 0.5)'
+        }),
+        // 线条颜色
+        stroke: new Stroke({
+          color: stroke.color || '#ff3300',
+          width: stroke.width || 2,
+          lineDash: stroke.lineDash || null,
+          // lineCap: stroke.lineCap||'round',
+          lineDashOffset: stroke.lineDashOffset || 0,
+          // lineJoin: stroke.lineJoin||'round',
+          miterLimit: stroke.miterLimit
+        }),
+        image: imageStyle,
+        text: new Text({
+          text: text.text,
+          scale: 1.5,
+          font: '10px sans-serif',
+          overflow: false,
+          offsetX: 0,
+          offsetY: 0
         })
       })
     }
-    return new Style({
-      fill: new Fill({
-        color: fillColor || 'rgba(255, 255, 255, 0.5)'
-      }),
-      // 线条颜色
-      stroke: new Stroke({
-        color: strokeColor || '#ff3300',
-        width: lineWidth || 2,
-        lineDash: lineDash || null
-      }),
-      image: image,
-      text: new Text({
-        text,
-        scale: 1.5
-      })
-    })
   }
 
   /**
@@ -419,26 +376,26 @@ export class OlMapService {
    * @param isGeojson 是否返回geojson，默认是true
    * @returns 根据传入条件返回geojson或feature
    */
-  drawendHandle(e: DrawEvent, type: any, text?: string, imageUrl?: string, isGeojson: boolean = true): Feature<Geometry> | string {
+  drawendHandle(e: DrawEvent, type: any, textStr?: string, imageUrl?: string, isGeojson: boolean = true): Feature<Geometry> | string {
     let style = this.createStyle(this.plotStyle);
-    let { textOffsetY } = this.plotStyle;
+    let { text, image } = this.plotStyle;
     e.feature.setStyle(style);
-    if (text) {
+    if (textStr) {
       if (type !== 'Point') {
-        textOffsetY = 1;
+        text.offsetY = 1;
       }
       style.setText(new Text({
-        text: text,
-        scale: this.plotStyle.textScale || 1.5,
-        offsetY: textOffsetY || -35
+        text: textStr,
+        scale: text.scale || 1.5,
+        offsetY: text.offsetY || -35
       }));
       e.feature.setStyle(style);
     }
     if (imageUrl) {
       style.setImage(new Icon({
         src: imageUrl,
-        scale: this.plotStyle.imageScal || .15,
-        anchor: this.plotStyle.imageAnchor || [110, 20],
+        scale: image.scale || .15,
+        anchor: image.anchor || [110, 20],
         anchorOrigin: IconOrigin.BOTTOM_LEFT,
         anchorXUnits: IconAnchorUnits.PIXELS,
         anchorYUnits: IconAnchorUnits.PIXELS
@@ -515,6 +472,7 @@ export class OlMapService {
    * @param properties 要设置的属性
    */
   setFeatureStyle(feature: Feature, style: Style | object, properties?: object) {
+    // TODO:重写这部分
     if (style instanceof Style) {
       feature.setStyle(style);
     } else {
