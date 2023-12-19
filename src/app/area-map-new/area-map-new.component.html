@@ -16,7 +16,7 @@
   </div>
   <ul class="properties-panel" *ngIf="hiddenPanel">
     <span class="close-panel" (click)="closePanel()">X</span>
-    <li class="setting-item">
+    <!-- <li class="setting-item">
       <label>线条颜色</label>
       <div class="color-container">
         <span class="color-block"
@@ -31,7 +31,7 @@
           [ngStyle]="{'background-color': item,'border-color':currentFillColor===item?'#000':'transparent'}"
           *ngFor="let item of fillColors;let i=index" (click)="chooseColor(item,'fill')"></span>
       </div>
-    </li>
+    </li> -->
     <li class="setting-item">
       <label>图层名称</label>
       <input rows="4" nz-input [(ngModel)]="layerName" (input)="setProperty()" />
@@ -51,19 +51,19 @@
         </div>
         <div class="sub-item">
           <label>字体大小</label>
-          <input type="number">
+          <input type="number" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>字体颜色</label>
-          <input type="color">
+          <input type="color" [(ngModel)]="strokeWidth" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>字体粗细</label>
-          <input type="checkbox" value="bold">加粗
+          <input type="checkbox" [(ngModel)]="strokeWidth" value="bold" (input)="setProperty()">加粗
         </div>
         <div class="sub-item">
           <label>字体倾斜</label>
-          <input type="checkbox" value="italic">倾斜
+          <input type="checkbox" [(ngModel)]="strokeWidth" value="italic" (input)="setProperty()">倾斜
         </div>
       </div>
     </li>
@@ -72,21 +72,21 @@
       <div class="item-style">
         <div class="sub-item">
           <label>线型</label>
-          <select>
+          <select [(ngModel)]="lineDash">
             <option *ngFor="let item of lineDashType">{{item.value}}</option>
           </select>
         </div>
         <div class="sub-item">
           <label>线条粗细</label>
-          <input type="number">
+          <input type="number" [(ngModel)]="strokeWidth" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>线条颜色</label>
-          <input type="color">
+          <input type="color" [(ngModel)]="currentStrokeColor" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>线条透明度</label>
-          <input type="number">
+          <input type="number" min="0" max="1" step="0.1" [(ngModel)]="strokeColorOpacity" (input)="setProperty()">
         </div>
       </div>
     </li>
@@ -95,11 +95,11 @@
       <div class="item-style">
         <div class="sub-item">
           <label>填充颜色</label>
-          <input type="color">
+          <input type="color" [(ngModel)]="currentFillColor" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>填充透明度</label>
-          <input type="number">
+          <input type="number" min="0" max="1" step="0.1" [(ngModel)]="fillColorOpacity" (input)="setProperty()">
         </div>
       </div>
     </li>

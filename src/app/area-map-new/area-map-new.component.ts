@@ -8,6 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { GeoJSON } from 'ol/format';
 import Point from 'ol/geom/Point';
 import * as turf from '@turf/turf';
+import { BaseStyle, TextStyle } from '../service/base-type';
 
 @Component({
   selector: 'area-map-new',
@@ -19,7 +20,6 @@ export class AreaMapNewComponent implements OnInit {
 
   /**
    * 覃智浩 2022年10月11日 14:53:36
-   * 新巡区地图绘制组件，使用的service也是重写的OlMapService
    */
   constructor(
     private http: HttpClient,
@@ -43,20 +43,27 @@ export class AreaMapNewComponent implements OnInit {
   currentFeature: Feature = null;
   layerDesc: string = null;
   layerName: string = null;
-  strokeColors: Array<string> = ['#E80505', '#FCCF31', '#F8D800', '#49C628', '#32CCBC', '#0396FF', '#3813C2'];
-  fillColors: Array<string> = [
-    'rgba(255, 255, 255, .5)',
-    'rgba(232, 5, 5, .3)',
-    'rgba(252, 207, 49, .3)',
-    'rgba(248, 215, 0, .3)',
-    'rgba(74, 198, 40, .3)',
-    'rgba(50, 204, 189, .3',
-    'rgba(3, 150, 255, .3)',
-    'rgba(57, 19, 194, .3)'
-  ];
+  // strokeColors: Array<string> = ['#E80505', '#FCCF31', '#F8D800', '#49C628', '#32CCBC', '#0396FF', '#3813C2'];
+  // fillColors: Array<string> = [
+  //   'rgba(255, 255, 255, .5)',
+  //   'rgba(232, 5, 5, .3)',
+  //   'rgba(252, 207, 49, .3)',
+  //   'rgba(248, 215, 0, .3)',
+  //   'rgba(74, 198, 40, .3)',
+  //   'rgba(50, 204, 189, .3',
+  //   'rgba(3, 150, 255, .3)',
+  //   'rgba(57, 19, 194, .3)'
+  // ];
   currentStrokeColor: string = '#E80505';
-  currentFillColor: string = 'rgba(255, 255, 255, 0.5)';
-
+  currentFillColor: string = '#ffffff';
+  fillColorOpacity: number = 0.5;
+  strokeColorOpacity: number = 1;
+  strokeWidth: number = 2;
+  lineDash = [];
+  textStyle: TextStyle = {
+    text: '',
+    font: '10px sans-serif',
+  };
 
   coordinate: number[] = [];
   geojson: {
@@ -165,9 +172,10 @@ export class AreaMapNewComponent implements OnInit {
     this.layerDesc = null;
     this.layerName = null;
     this.currentStrokeColor = '#E80505';
-    this.currentFillColor = 'rgba(255, 255, 255, 0.5)';
+    this.currentFillColor = '#ffffff';
   }
   chooseColor(color: string, type: string) {
+    console.log('选择的颜色', color);
     if (type === 'stroke') {
       this.currentStrokeColor = color;
     } else {
@@ -188,17 +196,22 @@ export class AreaMapNewComponent implements OnInit {
     // }
   }
   setProperty() {
-    const style = {
-      strokeColor: this.currentStrokeColor,
-      fillColor: this.currentFillColor,
-      text: this.layerName,
-      pointImageUrl: 'assets/img/location.png'
+    const style: BaseStyle = {
+      stroke: {
+        color: this.mapInstance.hexToRgba(this.currentStrokeColor, this.strokeColorOpacity),
+        width: this.strokeWidth,
+        lineDash: this.lineDash
+      },
+      fill: this.mapInstance.hexToRgba(this.currentFillColor, this.fillColorOpacity),
+      text: { text: this.layerName },
+      image: { type: '', src: 'assets/img/location.png' }
     }
     const properties = {
       name: this.layerName,
       desc: this.layerDesc,
       style
     }
+    console.log('设置样式', style);
     this.mapInstance.setFeatureStyle(this.currentFeature, style, properties);
     this.currentFeature.changed();
 

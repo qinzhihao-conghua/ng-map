@@ -1,5 +1,5 @@
 /**基本Style样式 */
-export class BaseStyle {
+export interface BaseStyle {
     /**填充色，rgba形式 */
     fill?: string;
     /**线条样式 */
@@ -30,6 +30,8 @@ export interface StrokeStyle {
 }
 /**点图片相关样式 */
 export interface ImageStyle {
+    /**点类型，如果改点是显示一个小图标，则type传icon */
+    type: string;
     /**图片地址 */
     src?: string;
     /**图片缩放 */
@@ -43,6 +45,8 @@ export interface ImageStyle {
 export interface TextStyle {
     /**文本 */
     text?: string;
+    /**颜色 */
+    color?: string;
     /**文本缩放 */
     scale?: number;
     /**文本字体，默认10px sans-serif */
