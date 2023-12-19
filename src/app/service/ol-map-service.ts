@@ -45,6 +45,7 @@ import { Observable } from './observable';
 import OverlayPositioning from 'ol/OverlayPositioning';
 import { getArea, getLength } from 'ol/sphere';
 import { BaseStyle, ClusterStyle, LayerOption } from './base-type';
+import { EventsKey } from 'ol/events';
 
 
 export class OlMapService {
@@ -69,37 +70,39 @@ export class OlMapService {
    * new TileImage({url:'',projection:'EPSG:4326'})
    * new TileSuperMapRest({url:'',projection:'EPSG:4326'})
    */
-  tileLayer = new TileLayer({
+  mapLayer = new TileLayer({
     // source: new OSM({
     //   attributions: 'xxxx股份有限公司'
     // })
   });
   /**
-   * 矢量图层源，相关绘制操作在这个图层上进行
+   * 地图底图图层源，相关绘制操作在这个图层上进行
    */
-  source = new VectorSource({ wrapX: false });
+  mapLayerSource = new VectorSource({ wrapX: false });
   /**
-   * 矢量图层，基本的图形样式，默认点的样式是普通的小圆点
+   * 操作图层，基本的图形样式，默认点的样式是普通的小圆点
    * 如果要展示图标image的值改成new Icon({})
    */
-  vector: VectorLayer = null;
+  operationLayers: VectorLayer = null;
+  /**浏览图层，只做一些显示上的操作，不修改操作图层上的图层 */
+  viewLayer: VectorLayer = null;
 
   highlight: Select;
-  deleteEventKey: any;
+  deleteEventKey: EventsKey;
   layerForDelete: Select;
   layerForPopup: Select;
   // 修改
-  modify = new Modify({ source: this.source });
+  modify = new Modify({ source: this.mapLayerSource });
   // 绘制对象
   draw: Draw;
   // 鼠标捕捉，用户修改
   snap: Snap;
   // 绘制类型
-  typeDraw = 'None';
+  typeDraw: string = 'None';
   // 水纹动画keys
-  animateKeys = [];
-  clickKey = [];
-  pointermoveEvent;
+  animateKeys: Array<EventsKey> = [];
+  clickKey: Array<EventsKey> = [];
+  pointermoveEvent: EventsKey;
   private otherTest = {
     sourceUrl: 'http://114.215.146.210:25003/v3/tile?x={x}&y={y}&z={z}',
     projection: 'EPSG:4326',
@@ -110,7 +113,7 @@ export class OlMapService {
    * 标绘图标的样式信息，记录传入的配置样式
    */
   plotStyle: BaseStyle;
-  clusterEventKey: any;
+  clusterEventKey: EventsKey;
   clusterSource: Cluster;
   markObj: any = {};
   /**
@@ -134,16 +137,16 @@ export class OlMapService {
     let { sourceUrl, projection, layerType, sourceType } = layerOption;
     this.plotStyle = baseStyle;
     // 创建地图图层
-    this.tileLayer = this.createMapLayer(layerType, sourceType, sourceUrl);
+    this.mapLayer = this.createMapLayer(layerType, sourceType, sourceUrl);
     // 创建标绘图层
     const style = this.createStyle(baseStyle);
-    this.vector = this.createVector(style);
+    this.operationLayers = this.createVector(style);
     this.map = new Map({
       target: targetId,
       controls: defaults().extend([
         // new MousePosition({ projection: 'EPSG:4326' })
       ]),
-      layers: [this.tileLayer, this.vector],
+      layers: [this.mapLayer, this.operationLayers],
       view: new View(viewOption),
       interactions: olDefaults({
         doubleClickZoom: false
@@ -203,7 +206,40 @@ export class OlMapService {
     }
     return source;
   }
-
+  /**
+   * 激活当前图层
+   */
+  activeFeature() {
+    this.clickToGetFeature().subscribe(feature => {
+      const newFeature = feature.clone();
+      const highlightStyle = new Style({
+        stroke: new Stroke({
+          color: '#4CAF50',
+          width: 2,
+        }),
+      });
+      newFeature.setStyle(highlightStyle);
+      if (!this.viewLayer) {
+        this.viewLayer = new VectorLayer({
+          source: new VectorSource(),
+          map: this.map,
+          // style: highlightStyle
+        });
+      }
+      this.viewLayer.getSource().clear();
+      this.viewLayer.getSource().addFeature(newFeature);
+      // TODO:有可能存在多选的操作，后面在说
+      // if (newFeature !== this.highlight) {
+      //   if (this.highlight) {
+      //     this.featureOverlay.getSource().removeFeature(this.highlight);
+      //   }
+      //   if (newFeature) {
+      //     this.featureOverlay.getSource().addFeature(newFeature);
+      //   }
+      //   this.highlight = newFeature;
+      // }
+    })
+  }
   /**
    * 点击获取feature
    * @returns
@@ -233,59 +269,138 @@ export class OlMapService {
    */
   private createVector(style: Style) {
     return new VectorLayer({
-      source: this.source,
+      source: this.mapLayerSource,
       style: style
     });
   }
+  /**
+   * rgb转16进制色值
+   * @param color 
+   */
+  rgbToHex(color: string): string {
+    if (color.indexOf('#') > -1) {
+      return color;
+    }
+    if (color) {
+      const rgb = color.split(',');
+      const r = parseInt(rgb[0].split('(')[1]);
+      const g = parseInt(rgb[1]);
+      const b = parseInt(rgb[2].split(')')[0]);
+      const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      return hex;
+    }
+  }
+  /**
+   * rgb转rgba
+   * @param color 
+   * @param alp 
+   * @returns 
+   */
+  rgbToRgba(color: string, alp: number) {
+    let rgbaAttr = color.match(/[\d.]+/g);
+    if (rgbaAttr.length >= 3) {
+      const r = rgbaAttr[0];
+      const g = rgbaAttr[1];
+      const b = rgbaAttr[2];
+      return 'rgba(' + r + ',' + g + ',' + b + ',' + alp + ')';
+    }
+  }
+  /**
+   * rgba转rgb和透明度
+   * @param rgba 
+   * @returns 
+   */
+  rgbaToColor(rgba: string) {
+    const arr = rgba.split("(")[1].split(")")[0].split(",");
+    const r = parseInt(arr[0]);
+    const g = parseInt(arr[1]);
+    const b = parseInt(arr[2]);
+    const a = arr[3] == null ? 1 : parseFloat(arr[3]);
+    return {
+      rgb: "rgb(" + r + "," + g + "," + b + ")",
+      alpha: a
+    };
+  };
+  /**
+   * 16进制转rgbz
+   * @param hex 
+   * @param alpha 
+   * @returns 
+   */
+  hexToRgba(hex: string, alpha: number) {
+    // let hex = hex.toLowerCase();
+    alpha = (alpha == null || alpha == undefined) ? 1 : alpha;
+    const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+    // 如果是16进制颜色
+    if (hex && reg.test(hex)) {
+      if (hex.length === 4) {
+        let hexNew = "#";
+        for (let i = 1; i < 4; i += 1) {
+          hexNew += hex.slice(i, i + 1).concat(hex.slice(i, i + 1));
+        }
+        hex = hexNew;
+      }
+      //处理六位的颜色值
+      let hexChange = [];
+      for (let i = 1; i < 7; i += 2) {
+        hexChange.push(parseInt("0x" + hex.slice(i, i + 2)));
+      }
+      return "rgba(" + hexChange.join(",") + "," + alpha + ")";
+    }
+    return hex;
+  };
   /**
    * 生成基本样式
    * @returns 
    */
   createStyle(style: BaseStyle): Style {
-    if (style instanceof BaseStyle) {
-      const { fill, stroke, pointColor, image, text } = style;
-      let imageStyle = null;
-      if (image && image.src) {
-        imageStyle = new Icon({
-          src: image.src,
-          // 图片缩放
-          scale: image.scale || .15,
-          anchor: [0.5, 1],
-          crossOrigin: 'anonymous'
-        })
-      } else {
-        imageStyle = new CircleStyle({ // 作用于点标注
-          radius: 7,
-          fill: new Fill({
-            color: pointColor || '#03a9f4',
-          })
-        })
-      }
-      return new Style({
+    // if (style instanceof BaseStyle) {
+    const { fill, stroke, pointColor, image, text } = style;
+    let imageStyle = null;
+    if (image && image.type === 'icon') {
+      imageStyle = new Icon({
+        src: image.src || '',
+        // 图片缩放
+        scale: image.scale || .15,
+        anchor: [0.5, 1],
+        crossOrigin: 'anonymous'
+      })
+    } else {
+      imageStyle = new CircleStyle({ // 作用于点标注
+        radius: 7,
         fill: new Fill({
-          color: fill || 'rgba(255, 255, 255, 0.5)'
-        }),
-        // 线条颜色
-        stroke: new Stroke({
-          color: stroke.color || '#ff3300',
-          width: stroke.width || 2,
-          lineDash: stroke.lineDash || null,
-          // lineCap: stroke.lineCap||'round',
-          lineDashOffset: stroke.lineDashOffset || 0,
-          // lineJoin: stroke.lineJoin||'round',
-          miterLimit: stroke.miterLimit
-        }),
-        image: imageStyle,
-        text: new Text({
-          text: text.text,
-          scale: 1.5,
-          font: '10px sans-serif',
-          overflow: false,
-          offsetX: 0,
-          offsetY: 0
+          color: pointColor || '#03a9f4',
         })
       })
     }
+    return new Style({
+      fill: new Fill({
+        color: fill || 'rgba(255, 255, 255, 0.5)'
+      }),
+      // 线条颜色
+      stroke: new Stroke({
+        color: stroke?.color || '#ff3300',
+        width: stroke?.width || 2,
+        lineDash: stroke?.lineDash || null,
+        // lineCap: stroke.lineCap||'round',
+        lineDashOffset: stroke?.lineDashOffset || 0,
+        // lineJoin: stroke.lineJoin||'round',
+        miterLimit: stroke?.miterLimit
+      }),
+      image: imageStyle,
+      text: new Text({
+        fill: new Fill({
+          color: text?.color || '#000000'
+        }),
+        text: text?.text || '',
+        scale: 1.5,
+        font: '10px sans-serif',
+        overflow: false,
+        offsetX: 0,
+        offsetY: 0
+      })
+    })
+    // }
   }
 
   /**
@@ -309,7 +424,7 @@ export class OlMapService {
       const subject = new Observable<string | Feature<Geometry>>();
       let drawType = type;
       let geometryFunction;
-      let style = (this.vector.getStyle() as Style);
+      let style = (this.operationLayers.getStyle() as Style);
       if (type === 'Square') {
         drawType = 'Circle';
         geometryFunction = createRegularPolygon(4);
@@ -318,7 +433,7 @@ export class OlMapService {
         geometryFunction = createBox();
       }
       this.draw = new Draw({
-        source: this.source,
+        source: this.mapLayerSource,
         type: drawType,
         geometryFunction,
         // 绘制时候的样式并不是最终的样式
@@ -328,33 +443,31 @@ export class OlMapService {
       this.backout();
       this.createHelpTooltip();
       this.createMeasureTooltip();
-      this.snap = new Snap({ source: this.source });
-      this.modify = new Modify({ source: this.source });
-      this.draw.on('drawstart', (evt) => {
-        // set sketch
-        this.sketch = evt.feature;
+      this.snap = new Snap({ source: this.mapLayerSource });
+      this.modify = new Modify({ source: this.mapLayerSource });
+      // this.draw.on('drawstart', (evt) => {
+      //   // set sketch
+      //   this.sketch = evt.feature;
+      //   // @ts-ignore
+      //   let tooltipCoord:Coordinate = evt.coordinate;
+      //   let listener:EventsKey;
+      //   listener = this.sketch.getGeometry().on('change', (change) => {
+      //     const geom = change.target;
+      //     let output;
+      //     if (geom instanceof Polygon) {
+      //       output = this.formatArea(geom);
+      //       // output = geom.getArea() + '---' + getArea(geom);
 
-        /** @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
-        // @ts-ignore
-        let tooltipCoord = evt.coordinate;
-        let listener;
-        listener = this.sketch.getGeometry().on('change', (change) => {
-          const geom = change.target;
-          let output;
-          if (geom instanceof Polygon) {
-            output = this.formatArea(geom);
-            // output = geom.getArea() + '---' + getArea(geom);
-
-            tooltipCoord = geom.getInteriorPoint().getCoordinates();
-          } else if (geom instanceof LineString) {
-            output = this.formatLength(geom);
-            // output = geom.getLength() + '---' + getLength(geom);
-            tooltipCoord = geom.getLastCoordinate();
-          }
-          this.measureTooltipElement.innerHTML = output;
-          this.measureTooltip.setPosition(tooltipCoord);
-        });
-      });
+      //       tooltipCoord = geom.getInteriorPoint().getCoordinates();
+      //     } else if (geom instanceof LineString) {
+      //       output = this.formatLength(geom);
+      //       // output = geom.getLength() + '---' + getLength(geom);
+      //       tooltipCoord = geom.getLastCoordinate();
+      //     }
+      //     this.measureTooltipElement.innerHTML = output;
+      //     this.measureTooltip.setPosition(tooltipCoord);
+      //   });
+      // });
       this.draw.on('drawend', (e) => {
         const result = this.drawendHandle(e, type, text, imageUrl, isGeojson);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
@@ -363,7 +476,7 @@ export class OlMapService {
         }
         subject.next(result);
       });
-      this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
+      // this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
       return subject;
     }
   }
@@ -471,17 +584,27 @@ export class OlMapService {
    * @param style 要设置的样式。可接收Style类型或者简单对象，对象类型暂未定
    * @param properties 要设置的属性
    */
-  setFeatureStyle(feature: Feature, style: Style | object, properties?: object) {
+  setFeatureStyle(feature: Feature, style: Style | BaseStyle, properties?: object) {
     // TODO:重写这部分
     if (style instanceof Style) {
       feature.setStyle(style);
     } else {
-      const { strokeColor, fillColor, imageUrl, text } = style as any;
-      const featureStyle: Style = feature.getStyle() as Style;
-      featureStyle.getStroke().setColor(strokeColor);
-      featureStyle.getFill().setColor(fillColor);
-      // featureStyle.getImage().load(imageUrl)
-      featureStyle.getText() ? featureStyle.getText().setText(text) : featureStyle.setText(new Text({ text, scale: 1.5 }))
+      const { stroke, fill, image, text } = style as BaseStyle;
+      const newStyleBase: BaseStyle = {
+        fill: fill,
+        image: image,
+        stroke: stroke,
+        text: text
+      };
+      let newStyle = this.createStyle(newStyleBase);
+      feature.setStyle(newStyle);
+      // const featureStyle: Style = feature.getStyle() as Style;
+      // if (featureStyle) {
+      //   featureStyle.getStroke().setColor(strokeColor);
+      //   featureStyle.getFill().setColor(fillColor);
+      //   // featureStyle.getImage().load(imageUrl)
+      //   featureStyle.getText() ? featureStyle.getText().setText(text) : featureStyle.setText(new Text({ text, scale: 1.5 }))
+      // }
     }
     feature.setProperties(properties)
   }
@@ -492,7 +615,7 @@ export class OlMapService {
    */
   getAllFeature() {
     // const result = this.source.getFeatures();
-    const result = this.vector.getSource().getFeatures();
+    const result = this.operationLayers.getSource().getFeatures();
     return result;
   }
   /**
@@ -553,7 +676,7 @@ export class OlMapService {
     this.map.addInteraction(this.layerForDelete);
     this.deleteEventKey = this.layerForDelete.on('select', (e: SelectEvent) => {
       if (e.selected.length > 0) {
-        this.source.removeFeature(e.selected[0]);
+        this.mapLayerSource.removeFeature(e.selected[0]);
         subject.next(e);
       }
     });
@@ -567,7 +690,7 @@ export class OlMapService {
     this.clearInteraction();
     // 清除水纹动画，但是会影响绘制单独的点
     unByKey(this.animateKeys);
-    this.source.clear();
+    this.mapLayerSource.clear();
     this.clusterSource ? this.clusterSource.clear() : null
     this.map.render();
   }
@@ -581,7 +704,7 @@ export class OlMapService {
     let start = new Date().getTime();
     const duration = 3000;
     // 进行地图水波渲染
-    this.animateKeys.push(this.tileLayer.on('postrender', animate.bind(this)));
+    this.animateKeys.push((this.mapLayerSource.on('postrender', animate.bind(this)) as EventsKey));
     function animate(event) {
       // 获取几何图形上下文
       const vectorContext = getVectorContext(event);
@@ -648,7 +771,14 @@ export class OlMapService {
     const resultFeatures = [];
     geojsonData.features.forEach((item, index) => {
       const style = item.properties ? item.properties.style : null;
-      let styleInstance = null;
+      let styleInstance = new Style({
+        stroke: new Stroke({
+          color: index > 8 ? '#000' : '#ff3300'
+        }),
+        fill: new Fill({
+          color: index > 8 ? 'rgba(255,255,255,.5)' : 'rgba(50,250,3,.5)'
+        }),
+      });
       if (style) {
         styleInstance = new Style({
           stroke: new Stroke({
@@ -696,12 +826,12 @@ export class OlMapService {
     // 监听导致绘制点的时候也执行添加动画
     let key = null;
     if (showdAnimate) {
-      key = this.source.on('addfeature', (e) => {
+      key = this.mapLayerSource.on('addfeature', (e) => {
         this.addAnimate(e.feature);
       });
     }
     const geo = new GeoJSON().readFeatures(geoPoints);
-    this.source.addFeatures(geo);
+    this.mapLayerSource.addFeatures(geo);
     this.setFeaturesCenter(geoPoints);
     this.clearInteraction();
     // 撒点完成之后解除事件绑定，防止在绘制其他图形时产生动画
@@ -714,7 +844,7 @@ export class OlMapService {
    */
   showPolyline(geoLine: object) {
     const line = new GeoJSON().readFeatures(geoLine);
-    this.source.addFeatures(line);
+    this.mapLayerSource.addFeatures(line);
     this.setFeaturesCenter(geoLine);
     this.clearInteraction();
   }
@@ -728,7 +858,7 @@ export class OlMapService {
     if (geoPolygon.type === 'FeatureCollection') {
       result = this.setStyleByProperties(geoPolygon, polygons);
     }
-    this.source.addFeatures(result);
+    this.mapLayerSource.addFeatures(result);
     this.setFeaturesCenter(geoPolygon);
     this.clearInteraction();
   }
@@ -764,7 +894,7 @@ export class OlMapService {
     })
     circleFeature.setStyle(style)
     // 将所有矢量图层添加进去
-    this.source.addFeatures([circleFeature]);
+    this.mapLayerSource.addFeatures([circleFeature]);
     this.setCenter(centerPoint);
     this.clearInteraction();
   }
@@ -774,7 +904,7 @@ export class OlMapService {
    */
   showSquare(geoSquare: object) {
     const square = new GeoJSON().readFeature(geoSquare);
-    this.source.addFeature(square);
+    this.mapLayerSource.addFeature(square);
     this.setFeaturesCenter(geoSquare);
     this.clearInteraction();
   }
@@ -1043,50 +1173,42 @@ export class OlMapService {
   }
   /**
  * Currently drawn feature.
- * @type {import("../src/ol/Feature.js").default}
  */
   sketch: Feature;
 
   /**
    * The help tooltip element.
-   * @type {HTMLElement}
    */
   helpTooltipElement: HTMLElement;
 
   /**
    * Overlay to show the help messages.
-   * @type {Overlay}
    */
   helpTooltip: Overlay;
 
   /**
    * The measure tooltip element.
-   * @type {HTMLElement}
    */
   measureTooltipElement: HTMLElement;
 
   /**
    * Overlay to show the measurement.
-   * @type {Overlay}
    */
   measureTooltip: Overlay;
 
   /**
    * Message to show when the user is drawing a polygon.
-   * @type {string}
    */
   continuePolygonMsg: string = 'Click to continue drawing the polygon';
 
   /**
    * Message to show when the user is drawing a line.
-   * @type {string}
    */
   continueLineMsg: string = 'Click to continue drawing the line';
   pointerMoveHandler = (evt) => {
     if (evt.dragging) {
       return;
     }
-    /** @type {string} */
     let helpMsg = 'Click to start drawing';
 
     if (this.sketch) {
@@ -1139,10 +1261,9 @@ export class OlMapService {
   }
   /**
  * Format length output.
- * @param {LineString} line The line.
- * @return {string} The formatted length.
+ * @param line line The line.
  */
-  formatLength(line) {
+  formatLength(line: LineString) {
     const length = getLength(line, { projection: 'EPSG:4326'/*, radius: 6371008.8*/ });
     let output;
     if (length > 100) {
@@ -1155,12 +1276,11 @@ export class OlMapService {
 
   /**
    * Format area output.
-   * @param {Polygon} polygon The polygon.
-   * @return {string} Formatted area.
+   * @param polygon The polygon.
    */
-  formatArea(polygon) {
+  formatArea(polygon: Polygon) {
     const area = getArea(polygon, { projection: 'EPSG:4326'/*, radius: 6371008.8*/ });
-    let output;
+    let output: string;
     if (area > 10000) {
       output = Math.round((area / 1000000) * 100) / 100 + ' ' + 'km<sup>2</sup>';
     } else {

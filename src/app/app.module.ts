@@ -10,6 +10,7 @@ import { ImageMapComponent } from './image-map/image-map.component';
 import { MapabcComponent } from './mapabc/mapabc.component';
 import { MinemapComponent } from './minemap/minemap.component';
 import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
+import { XzqhComponent } from './xzqh/xzqh.component';
 
 @NgModule({
   declarations: [
@@ -18,7 +19,8 @@ import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
     AreaMapNewComponent,
     MapabcComponent,
     MinemapComponent,
-    ImageMapComponent
+    ImageMapComponent,
+    XzqhComponent
   ],
   imports: [
     BrowserModule,
