@@ -59,7 +59,7 @@ export class AreaMapNewComponent implements OnInit {
   fillColorOpacity: number = 0.5;
   strokeColorOpacity: number = 1;
   strokeWidth: number = 2;
-  lineDash = [];
+  lineDash: string = '1';
   textStyle: TextStyle = {
     text: '',
     font: '10px sans-serif',
@@ -83,11 +83,16 @@ export class AreaMapNewComponent implements OnInit {
   markerAnimationLayer = null;
   markDisabled = true;
   fontType: Array<string> = ['宋体', '微软雅黑', '仿宋', '黑体', '方正', '华文隶书', '等线', '华文行楷', 'sans-serif'];
+  fontSize: number = 16;
+  fontColr: string;
+  fontFamily: string = '黑体';
+  fontItalic: boolean = false;
+  fontWeight: boolean = false;
   lineDashType: Array<any> = [
     { key: '1', code: [], value: '—————' },
     { key: '2', code: [5, 5], value: '...................' },
     { key: '3', code: [10, 10], value: '----------' },
-    { key: '4', code: [20, 5], value: '— — —  ' }
+    { key: '4', code: [20, 15], value: '— — —  ' }
   ];
 
   ngOnInit() {
@@ -200,10 +205,14 @@ export class AreaMapNewComponent implements OnInit {
       stroke: {
         color: this.mapInstance.hexToRgba(this.currentStrokeColor, this.strokeColorOpacity),
         width: this.strokeWidth,
-        lineDash: this.lineDash
+        lineDash: this.lineDashType.filter(item => item.key === this.lineDash)[0].code
       },
       fill: this.mapInstance.hexToRgba(this.currentFillColor, this.fillColorOpacity),
-      text: { text: this.layerName },
+      text: {
+        text: this.layerName,
+        color: this.fontColr,
+        font: `${this.fontWeight === true ? 'bold' : 'normal'} ${this.fontItalic === true ? 'italic' : 'normal'} normal ${this.fontSize}px ${this.fontFamily}`
+      },
       image: { type: '', src: 'assets/img/location.png' }
     }
     const properties = {
@@ -211,7 +220,7 @@ export class AreaMapNewComponent implements OnInit {
       desc: this.layerDesc,
       style
     }
-    console.log('设置样式', style);
+    // console.log('设置样式', style);
     this.mapInstance.setFeatureStyle(this.currentFeature, style, properties);
     this.currentFeature.changed();
 

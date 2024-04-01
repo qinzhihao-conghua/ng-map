@@ -34,36 +34,36 @@
     </li> -->
     <li class="setting-item">
       <label>图层名称</label>
-      <input rows="4" nz-input [(ngModel)]="layerName" (input)="setProperty()" />
+      <input rows="4" nz-input [(ngModel)]="layerName" (ngModelChange)="setProperty()" />
     </li>
     <li class="setting-item">
       <label>图层描述</label>
-      <textarea rows="4" nz-input [(ngModel)]="layerDesc" (input)="setProperty()"></textarea>
+      <textarea rows="4" nz-input [(ngModel)]="layerDesc" (ngModelChange)="setProperty()"></textarea>
     </li>
     <li class="setting-item column-item">
       <label>字体设置</label>
       <div class="item-style">
         <div class="sub-item">
           <label>字体</label>
-          <select>
+          <select [(ngModel)]="fontFamily" (ngModelChange)="setProperty()">
             <option *ngFor="let item of fontType">{{item}}</option>
           </select>
         </div>
         <div class="sub-item">
           <label>字体大小</label>
-          <input type="number" (input)="setProperty()">
+          <input type="number" [(ngModel)]="fontSize" (ngModelChange)="setProperty()">
         </div>
         <div class="sub-item">
           <label>字体颜色</label>
-          <input type="color" [(ngModel)]="strokeWidth" (input)="setProperty()">
+          <input type="color" [(ngModel)]="fontColr" (input)="setProperty()">
         </div>
         <div class="sub-item">
           <label>字体粗细</label>
-          <input type="checkbox" [(ngModel)]="strokeWidth" value="bold" (input)="setProperty()">加粗
+          <input type="checkbox" [(ngModel)]="fontWeight" (input)="setProperty()">加粗
         </div>
         <div class="sub-item">
           <label>字体倾斜</label>
-          <input type="checkbox" [(ngModel)]="strokeWidth" value="italic" (input)="setProperty()">倾斜
+          <input type="checkbox" [(ngModel)]="fontItalic" (input)="setProperty()">倾斜
         </div>
       </div>
     </li>
@@ -72,8 +72,8 @@
       <div class="item-style">
         <div class="sub-item">
           <label>线型</label>
-          <select [(ngModel)]="lineDash">
-            <option *ngFor="let item of lineDashType">{{item.value}}</option>
+          <select [(ngModel)]="lineDash" (ngModelChange)="setProperty()">
+            <option *ngFor="let item of lineDashType" [value]='item.key'>{{item.value}}</option>
           </select>
         </div>
         <div class="sub-item">
