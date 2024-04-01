@@ -25,7 +25,7 @@ export interface StrokeStyle {
     lineDashOffset?: number;
     /**默认round */
     lineJoin?: string;
-    /**默认0 */
+    /**拐点样式默认0 */
     miterLimit?: number;
 }
 /**点图片相关样式 */

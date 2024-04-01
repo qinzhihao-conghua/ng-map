@@ -394,7 +394,8 @@ export class OlMapService {
         }),
         text: text?.text || '',
         scale: 1.5,
-        font: '10px sans-serif',
+        // font: 'bold italic 16px 仿宋',
+        font: text?.font || '10px 黑体',
         overflow: false,
         offsetX: 0,
         offsetY: 0
