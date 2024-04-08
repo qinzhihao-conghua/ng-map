@@ -136,6 +136,7 @@ export class AreaMapNewComponent implements OnInit {
         const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
         this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
           this.activeFeature(data);
+          this.layerName = data.getProperties()['mes']
           setTimeout(() => {
             this.setProperty();
           }, 300);
