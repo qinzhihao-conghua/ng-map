@@ -20,7 +20,7 @@ import Polygon from 'ol/geom/Polygon';
 import Point from 'ol/geom/Point';
 import { getVectorContext } from 'ol/render';
 import { easeOut } from 'ol/easing';
-import { Circle as CircleGemo, Geometry } from 'ol/geom';
+import { Circle, Circle as CircleGemo, Geometry } from 'ol/geom';
 import { unByKey } from 'ol/Observable';
 import { GeoJSON } from 'ol/format';
 import { ProjectionLike, transform } from 'ol/proj';
@@ -116,6 +116,16 @@ export class OlMapService {
   clusterEventKey: EventsKey;
   clusterSource: Cluster;
   markObj: any = {};
+  /** 正在绘制的 feature */
+  sketch: Feature;
+  /** 绘制提示语dom容器 */
+  helpTooltipElement: HTMLElement;
+  /** 展示帮助信息的Overlay */
+  helpTooltip: Overlay;
+  /** 测量提示语dom容器 */
+  measureTooltipElement: HTMLElement;
+  /** 展示测量提示的Overlay */
+  measureTooltip: Overlay;
   /**
    * 初始化地图，该service目标是脱离框架使用，因此基本地图配置项请从外部传入
    * @param targetId 地图容器id
@@ -446,38 +456,42 @@ export class OlMapService {
       this.createMeasureTooltip();
       this.snap = new Snap({ source: this.mapLayerSource });
       this.modify = new Modify({ source: this.mapLayerSource });
-      // this.draw.on('drawstart', (evt) => {
-      //   // set sketch
-      //   this.sketch = evt.feature;
-      //   // @ts-ignore
-      //   let tooltipCoord:Coordinate = evt.coordinate;
-      //   let listener:EventsKey;
-      //   listener = this.sketch.getGeometry().on('change', (change) => {
-      //     const geom = change.target;
-      //     let output;
-      //     if (geom instanceof Polygon) {
-      //       output = this.formatArea(geom);
-      //       // output = geom.getArea() + '---' + getArea(geom);
-
-      //       tooltipCoord = geom.getInteriorPoint().getCoordinates();
-      //     } else if (geom instanceof LineString) {
-      //       output = this.formatLength(geom);
-      //       // output = geom.getLength() + '---' + getLength(geom);
-      //       tooltipCoord = geom.getLastCoordinate();
-      //     }
-      //     this.measureTooltipElement.innerHTML = output;
-      //     this.measureTooltip.setPosition(tooltipCoord);
-      //   });
-      // });
+      let output: string;
+      this.draw.on('drawstart', (evt) => {
+        output = '';
+        // set sketch
+        this.sketch = evt.feature;
+        // @ts-ignore
+        let tooltipCoord: Coordinate = evt.coordinate;
+        let listener: EventsKey;
+        listener = this.sketch.getGeometry().on('change', (change) => {
+          const geom = change.target;
+          if (geom instanceof Polygon) {
+            output = this.formatArea(geom);
+            // output = geom.getArea() + '---' + getArea(geom);
+            tooltipCoord = geom.getInteriorPoint().getCoordinates();
+          } else if (geom instanceof LineString) {
+            output = this.formatLength(geom);
+            // output = geom.getLength() + '---' + getLength(geom);
+            tooltipCoord = geom.getLastCoordinate();
+          } else if (geom instanceof Circle) {
+            output = '圆的面积还没有实现';
+            tooltipCoord = geom.getCenter();
+          }
+          this.measureTooltipElement.innerHTML = output;
+          this.measureTooltip.setPosition(tooltipCoord);
+        });
+      });
       this.draw.on('drawend', (e) => {
-        const result = this.drawendHandle(e, type, text, imageUrl, isGeojson);
+        e.feature.setProperties({ mes: output })
+        const result = this.drawendHandle(e, type, text || output, imageUrl, isGeojson);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         if (!succession) {
           this.clearInteraction();
         }
         subject.next(result);
       });
-      // this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
+      this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
       return subject;
     }
   }
@@ -492,30 +506,31 @@ export class OlMapService {
    */
   drawendHandle(e: DrawEvent, type: any, textStr?: string, imageUrl?: string, isGeojson: boolean = true): Feature<Geometry> | string {
     let style = this.createStyle(this.plotStyle);
-    let { text, image } = this.plotStyle;
+    // let { text, image } = this.plotStyle;
     e.feature.setStyle(style);
     if (textStr) {
-      if (type !== 'Point') {
-        text.offsetY = 1;
-      }
-      style.setText(new Text({
-        text: textStr,
-        scale: text.scale || 1.5,
-        offsetY: text.offsetY || -35
-      }));
-      e.feature.setStyle(style);
+      // if (type !== 'Point') {
+      //   text.offsetY = 1;
+      // }
+      // style.setText(new Text({
+      //   // text: textStr,
+      //   // scale: text.scale || 1.5,
+      //   // offsetY: text.offsetY || -35
+      // }));
+      // e.feature.setStyle(style);
     }
     if (imageUrl) {
       style.setImage(new Icon({
         src: imageUrl,
-        scale: image.scale || .15,
-        anchor: image.anchor || [110, 20],
+        // scale: image.scale || .15,
+        // anchor: image.anchor || [110, 20],
         anchorOrigin: IconOrigin.BOTTOM_LEFT,
         anchorXUnits: IconAnchorUnits.PIXELS,
         anchorYUnits: IconAnchorUnits.PIXELS
       }));
-      e.feature.setStyle(style);
+      // e.feature.setStyle(style);
     }
+    e.feature.setStyle(style);
     if (!e.feature.getId()) {
       e.feature.setId(this.newGuid());
     }
@@ -1172,52 +1187,21 @@ export class OlMapService {
     this.markObj.geoMarker.setGeometry(this.markObj.position);
     this.markObj.vectorLayer.un('postrender', this.moveFeature);
   }
-  /**
- * Currently drawn feature.
- */
-  sketch: Feature;
 
-  /**
-   * The help tooltip element.
-   */
-  helpTooltipElement: HTMLElement;
-
-  /**
-   * Overlay to show the help messages.
-   */
-  helpTooltip: Overlay;
-
-  /**
-   * The measure tooltip element.
-   */
-  measureTooltipElement: HTMLElement;
-
-  /**
-   * Overlay to show the measurement.
-   */
-  measureTooltip: Overlay;
-
-  /**
-   * Message to show when the user is drawing a polygon.
-   */
-  continuePolygonMsg: string = 'Click to continue drawing the polygon';
-
-  /**
-   * Message to show when the user is drawing a line.
-   */
-  continueLineMsg: string = 'Click to continue drawing the line';
   pointerMoveHandler = (evt) => {
     if (evt.dragging) {
       return;
     }
-    let helpMsg = 'Click to start drawing';
+    let helpMsg = '点击开始绘制';
 
     if (this.sketch) {
       const geom = this.sketch.getGeometry();
       if (geom instanceof Polygon) {
-        helpMsg = this.continuePolygonMsg;
+        helpMsg = '单击继续绘制，双击结束绘制';
       } else if (geom instanceof LineString) {
-        helpMsg = this.continueLineMsg;
+        helpMsg = '单击继续绘制，双击结束绘制';
+      } else if (geom instanceof Circle) {
+        helpMsg = '再次单击结束绘制';
       }
     }
 
@@ -1226,7 +1210,7 @@ export class OlMapService {
     this.helpTooltipElement.classList.remove('hidden');
   };
   /**
- * Creates a new help tooltip
+ * 创建提示语
  */
   createHelpTooltip() {
     if (this.helpTooltipElement) {
@@ -1243,7 +1227,7 @@ export class OlMapService {
     this.map.addOverlay(this.helpTooltip);
   }
   /**
-   * Creates a new measure tooltip
+   * 创建测量提示
    */
   createMeasureTooltip() {
     if (this.measureTooltipElement) {
@@ -1261,7 +1245,7 @@ export class OlMapService {
     this.map.addOverlay(this.measureTooltip);
   }
   /**
- * Format length output.
+ * 格式化长度输出
  * @param line line The line.
  */
   formatLength(line: LineString) {
@@ -1276,7 +1260,7 @@ export class OlMapService {
   };
 
   /**
-   * Format area output.
+   * 格式化面积
    * @param polygon The polygon.
    */
   formatArea(polygon: Polygon) {
