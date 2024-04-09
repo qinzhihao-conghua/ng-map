@@ -107,7 +107,10 @@
     </li>
   </ul>
   <div id="popup" class="ol-popup">
-    <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer">X</a>
+    <div class="popup-title">
+      <span>属性信息</span>
+      <a id="popup-closer" (click)="closePopup()" class="ol-popup-closer">X</a>
+    </div>
     <div id="popup-content"></div>
   </div>
   <a id="image-download" download="map.png"></a>

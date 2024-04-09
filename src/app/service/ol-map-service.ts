@@ -427,7 +427,7 @@ export class OlMapService {
    * @param isGeojson 是否返回geojson，默认是true
    * @returns 根据传入条件返回geojson或feature
    */
-  addInteractions(type: any, text?: string, imageUrl?: string, succession?: boolean, isGeojson: boolean = true): Observable<string | Feature<Geometry>> {
+  addInteractions(type: any, succession?: boolean, isGeojson: boolean = true): Observable<string | Feature<Geometry>> {
     if (type !== 'None') {
       this.clearInteraction();
       // 
@@ -435,7 +435,7 @@ export class OlMapService {
       const subject = new Observable<string | Feature<Geometry>>();
       let drawType = type;
       let geometryFunction;
-      let style = (this.operationLayers.getStyle() as Style);
+      // let style = (this.operationLayers.getStyle() as Style);
       if (type === 'Square') {
         drawType = 'Circle';
         geometryFunction = createRegularPolygon(4);
@@ -456,35 +456,23 @@ export class OlMapService {
       this.createMeasureTooltip();
       this.snap = new Snap({ source: this.mapLayerSource });
       this.modify = new Modify({ source: this.mapLayerSource });
-      let output: string;
+      // let output: string;
       this.draw.on('drawstart', (evt) => {
-        output = '';
+        // output = '';
         // set sketch
         this.sketch = evt.feature;
         // @ts-ignore
-        let tooltipCoord: Coordinate = evt.coordinate;
+        // let tooltipCoord: Coordinate = evt.coordinate;
         let listener: EventsKey;
         listener = this.sketch.getGeometry().on('change', (change) => {
-          const geom = change.target;
-          if (geom instanceof Polygon) {
-            output = this.formatArea(geom);
-            // output = geom.getArea() + '---' + getArea(geom);
-            tooltipCoord = geom.getInteriorPoint().getCoordinates();
-          } else if (geom instanceof LineString) {
-            output = this.formatLength(geom);
-            // output = geom.getLength() + '---' + getLength(geom);
-            tooltipCoord = geom.getLastCoordinate();
-          } else if (geom instanceof Circle) {
-            output = '圆的面积还没有实现';
-            tooltipCoord = geom.getCenter();
-          }
-          this.measureTooltipElement.innerHTML = output;
-          this.measureTooltip.setPosition(tooltipCoord);
+          const result = this.getMeasureData(change.target);
+          this.measureTooltipElement.innerHTML = result.measureData;
+          this.measureTooltip.setPosition(result.tooltipCoord);
         });
       });
       this.draw.on('drawend', (e) => {
-        e.feature.setProperties({ mes: output })
-        const result = this.drawendHandle(e, type, text || output, imageUrl, isGeojson);
+        // e.feature.setProperties({ measure: output })
+        const result = this.drawendHandle(e, isGeojson);
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         if (!succession) {
           this.clearInteraction();
@@ -504,33 +492,33 @@ export class OlMapService {
    * @param isGeojson 是否返回geojson，默认是true
    * @returns 根据传入条件返回geojson或feature
    */
-  drawendHandle(e: DrawEvent, type: any, textStr?: string, imageUrl?: string, isGeojson: boolean = true): Feature<Geometry> | string {
-    let style = this.createStyle(this.plotStyle);
+  drawendHandle(e: DrawEvent, isGeojson: boolean = true): Feature<Geometry> | string {
+    // let style = this.createStyle(this.plotStyle);
     // let { text, image } = this.plotStyle;
-    e.feature.setStyle(style);
-    if (textStr) {
-      // if (type !== 'Point') {
-      //   text.offsetY = 1;
-      // }
-      // style.setText(new Text({
-      //   // text: textStr,
-      //   // scale: text.scale || 1.5,
-      //   // offsetY: text.offsetY || -35
-      // }));
-      // e.feature.setStyle(style);
-    }
-    if (imageUrl) {
-      style.setImage(new Icon({
-        src: imageUrl,
-        // scale: image.scale || .15,
-        // anchor: image.anchor || [110, 20],
-        anchorOrigin: IconOrigin.BOTTOM_LEFT,
-        anchorXUnits: IconAnchorUnits.PIXELS,
-        anchorYUnits: IconAnchorUnits.PIXELS
-      }));
-      // e.feature.setStyle(style);
-    }
-    e.feature.setStyle(style);
+    // e.feature.setStyle(style);
+    // if (textStr) {
+    // if (type !== 'Point') {
+    //   text.offsetY = 1;
+    // }
+    // style.setText(new Text({
+    //   // text: textStr,
+    //   // scale: text.scale || 1.5,
+    //   // offsetY: text.offsetY || -35
+    // }));
+    // e.feature.setStyle(style);
+    // }
+    // if (imageUrl) {
+    //   style.setImage(new Icon({
+    //     src: imageUrl,
+    //     // scale: image.scale || .15,
+    //     // anchor: image.anchor || [110, 20],
+    //     anchorOrigin: IconOrigin.BOTTOM_LEFT,
+    //     anchorXUnits: IconAnchorUnits.PIXELS,
+    //     anchorYUnits: IconAnchorUnits.PIXELS
+    //   }));
+    //   // e.feature.setStyle(style);
+    // }
+    // e.feature.setStyle(style);
     if (!e.feature.getId()) {
       e.feature.setId(this.newGuid());
     }
@@ -1188,6 +1176,11 @@ export class OlMapService {
     this.markObj.vectorLayer.un('postrender', this.moveFeature);
   }
 
+  /**
+   * 鼠标移动事件提示
+   * @param evt 
+   * @returns 
+   */
   pointerMoveHandler = (evt) => {
     if (evt.dragging) {
       return;
@@ -1210,8 +1203,8 @@ export class OlMapService {
     this.helpTooltipElement.classList.remove('hidden');
   };
   /**
- * 创建提示语
- */
+   * 创建提示语
+   */
   createHelpTooltip() {
     if (this.helpTooltipElement) {
       this.helpTooltipElement.parentNode.removeChild(this.helpTooltipElement);
@@ -1245,9 +1238,9 @@ export class OlMapService {
     this.map.addOverlay(this.measureTooltip);
   }
   /**
- * 格式化长度输出
- * @param line line The line.
- */
+   * 格式化长度输出
+   * @param line line The line.
+   */
   formatLength(line: LineString) {
     const length = getLength(line, { projection: 'EPSG:4326'/*, radius: 6371008.8*/ });
     let output;
@@ -1273,4 +1266,32 @@ export class OlMapService {
     }
     return output;
   };
+
+  /**
+   * 获取图形测量数据
+   * @param feature 
+   */
+  getMeasureData(data: Geometry | Feature) {
+    let measureData: string = '';
+    let tooltipCoord: Coordinate;
+    let geom = data;
+    if (geom instanceof Feature) {
+      geom = geom.getGeometry();
+    }
+    if (geom instanceof Polygon) {
+      measureData = this.formatArea(geom);
+      // output = geom.getArea() + '---' + getArea(geom);
+      tooltipCoord = geom.getInteriorPoint().getCoordinates();
+    } else if (geom instanceof LineString) {
+      measureData = this.formatLength(geom);
+      // output = geom.getLength() + '---' + getLength(geom);
+      tooltipCoord = geom.getLastCoordinate();
+    } else if (geom instanceof Circle) {
+      const perMeter = this.map.getView().getProjection().getMetersPerUnit();
+      const area = Math.PI * Math.pow(geom.getRadius() * perMeter, 2);
+      measureData = (Math.round(area) / 100) + ' 平方米';
+      tooltipCoord = geom.getCenter();
+    }
+    return { measureData, tooltipCoord };
+  }
 }
