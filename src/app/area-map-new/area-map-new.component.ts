@@ -9,6 +9,7 @@ import { GeoJSON } from 'ol/format';
 import Point from 'ol/geom/Point';
 import * as turf from '@turf/turf';
 import { BaseStyle, TextStyle } from '../service/base-type';
+import { Circle } from 'ol/geom';
 
 @Component({
   selector: 'area-map-new',
@@ -134,9 +135,9 @@ export class AreaMapNewComponent implements OnInit {
       case 'Polygon':
       case 'Circle':
         const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
-        this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
+        this.mapInstance.addInteractions(type, false, false).subscribe((data: Feature) => {
           this.activeFeature(data);
-          this.layerName = data.getProperties()['mes']
+          // this.layerName = data.getProperties()['measure']
           setTimeout(() => {
             this.setProperty();
           }, 300);
@@ -330,17 +331,24 @@ export class AreaMapNewComponent implements OnInit {
       // if (features.length > 0) {
       console.log('features属性', data.getProperties());
       console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      const measureData = this.mapInstance.getMeasureData(data);
+      console.log('测量数据', measureData);
       const dom = document.getElementById('popup');
       dom.style.display = 'block';
       const content = document.getElementById('popup-content');
       content.innerHTML = `
-            <p>测试popup</p>
+            <p>${measureData.measureData}</p>
             <p>测试popup</p>
             <p>测试popup</p>
             <p>测试popup</p>
           `;
       // @ts-ignore
-      const center = turf.center(JSON.parse(new GeoJSON().writeFeature(data))).geometry.coordinates;
+      let center = [];
+      if (data.getGeometry().getType() === 'Circle') {
+        center = (data.getGeometry() as Circle).getCenter()
+      } else {
+        center = turf.center(JSON.parse(new GeoJSON().writeFeature(data))).geometry.coordinates;
+      }
       this.mapInstance.showPopup(dom, center, 'test');
       // }
     });
