@@ -1,82 +1,83 @@
 /**基本Style样式 */
-export interface BaseStyle {
+export class BaseStyle {
     /**填充色，rgba形式 */
-    fill?: string;
+    fill?: string = 'rgba(255, 255, 255, 0.5)';
     /**线条样式 */
-    stroke?: StrokeStyle;
+    stroke?: StrokeStyle = new StrokeStyle();
     /**点图片样式 */
-    image?: ImageStyle;
+    image?: ImageStyle = new ImageStyle();
     /**文本样式 */
-    text?: TextStyle;
+    text?: TextStyle = new TextStyle();
     /**点颜色，与图片互斥 */
-    pointColor?: string;
+    pointColor?: string = '#03a9f4';
 }
 /**线条相关样式 */
-export interface StrokeStyle {
+export class StrokeStyle {
     /**线条颜色 */
-    color?: string;
+    color?: string = '#ff3300';
     /**线条宽度 */
-    width?: number;
+    width?: number = 2;
     /**虚线间隔 */
     lineDash?: Array<number>;
     /**线条端点类型，默认round */
     lineCap?: string;
     /**虚线端点 */
-    lineDashOffset?: number;
+    lineDashOffset?: number = 0;
     /**默认round */
     lineJoin?: string;
     /**拐点样式默认0 */
     miterLimit?: number;
 }
 /**点图片相关样式 */
-export interface ImageStyle {
-    /**点类型，如果改点是显示一个小图标，则type传icon */
-    type: string;
-    /**图片地址 */
-    src?: string;
-    /**图片缩放 */
-    scale?: number;
-    /**图片锚点位置 */
-    anchor?: Array<number>;
-    /**图片跨域，anonymous */
-    crossOrigin?: string;
+export class ImageStyle {
+    /**点类型，如果该点是显示一个小图标，则type传icon */
+    type?: string;
+    /**icon图片地址 */
+    src?: string = '';
+    /**icon图片缩放 */
+    scale?: number = .15;
+    /**icon图片锚点位置 */
+    anchor?: Array<number> = [0.5, 1];
+    /**icon图片跨域，anonymous */
+    crossOrigin?: string = 'anonymous';
+    circleRadius?: number = 7;
 }
 /**文本相关样式 */
-export interface TextStyle {
+export class TextStyle {
     /**文本 */
     text?: string;
     /**颜色 */
-    color?: string;
+    color?: string = '#000000';
     /**文本缩放 */
-    scale?: number;
+    scale?: number = 1;
     /**文本字体，默认10px sans-serif */
-    font?: string;
+    font?: string = '10px 黑体';
     /**文本溢出 */
-    overflow?: boolean;
+    overflow?: boolean = false;
     /**文本x偏移 */
-    offsetX?: number;
+    offsetX?: number = 0;
     /**文本y偏移 */
-    offsetY?: number;
+    offsetY?: number = 0;
 }
 /** 底图基本信息 */
-export interface LayerOption {
+export class LayerOption {
     /**sourceUrl */
-    sourceUrl: string,
+    sourceUrl: string;
     /**坐标系 */
-    projection: string,
+    projection: string;
     /**图层类型 */
-    layerType: string,
+    layerType: string;
     /**sourceType */
-    sourceType: string
+    sourceType: string;
 }
 /**聚合图样式 */
-export interface ClusterStyle {
+export class ClusterStyle {
     /**半径 */
-    radius?: number,
+    radius?: number;
     /**描边 */
-    stroke?: string,
+    stroke?: string;
     /**填充 */
-    fill?: string,
+    fill?: string;
     /**文本颜色 */
-    textColor?: string
+    textColor?: string;
 }

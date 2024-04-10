@@ -138,9 +138,9 @@ export class AreaMapNewComponent implements OnInit {
         this.mapInstance.addInteractions(type, false, false).subscribe((data: Feature) => {
           this.activeFeature(data);
           // this.layerName = data.getProperties()['measure']
-          setTimeout(() => {
-            this.setProperty();
-          }, 300);
+          // setTimeout(() => {
+          //   this.setProperty();
+          // }, 300);
           // 单独返回这个巡区
           // const geojson = this.mapInstance.featuresToGeojson([data]);
           // this.drawBackFeature.emit(geojson);
