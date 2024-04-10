@@ -112,7 +112,7 @@ export class OlMapService {
   /**
    * 标绘图标的样式信息，记录传入的配置样式
    */
-  plotStyle: BaseStyle;
+  plotStyle: BaseStyle = new BaseStyle();
   clusterEventKey: EventsKey;
   clusterSource: Cluster;
   markObj: any = {};
@@ -145,11 +145,13 @@ export class OlMapService {
   initMap(targetId: string, viewOption: ViewOptions, layerOption: LayerOption = this.otherTest, baseStyle: BaseStyle = {}): Map {
 
     let { sourceUrl, projection, layerType, sourceType } = layerOption;
-    this.plotStyle = baseStyle;
+    if (baseStyle instanceof BaseStyle) {
+      this.plotStyle = baseStyle;
+    }
     // 创建地图图层
     this.mapLayer = this.createMapLayer(layerType, sourceType, sourceUrl);
     // 创建标绘图层
-    const style = this.createStyle(baseStyle);
+    const style = this.createStyle(this.plotStyle);
     this.operationLayers = this.createVector(style);
     this.map = new Map({
       target: targetId,
@@ -365,50 +367,53 @@ export class OlMapService {
    */
   createStyle(style: BaseStyle): Style {
     // if (style instanceof BaseStyle) {
-    const { fill, stroke, pointColor, image, text } = style;
+    const stroke = style.stroke;
+    const pointColor = style.pointColor;
+    const image = style.image;
+    const text = style.text;
     let imageStyle = null;
     if (image && image.type === 'icon') {
       imageStyle = new Icon({
-        src: image.src || '',
+        src: image?.src,
         // 图片缩放
-        scale: image.scale || .15,
-        anchor: [0.5, 1],
-        crossOrigin: 'anonymous'
+        scale: image?.scale,
+        anchor: image?.anchor,
+        crossOrigin: image?.crossOrigin
       })
     } else {
       imageStyle = new CircleStyle({ // 作用于点标注
         radius: 7,
         fill: new Fill({
-          color: pointColor || '#03a9f4',
+          color: pointColor,
         })
       })
     }
     return new Style({
       fill: new Fill({
-        color: fill || 'rgba(255, 255, 255, 0.5)'
+        color: style.fill
       }),
       // 线条颜色
       stroke: new Stroke({
-        color: stroke?.color || '#ff3300',
-        width: stroke?.width || 2,
-        lineDash: stroke?.lineDash || null,
+        color: stroke?.color,
+        width: stroke?.width,
+        lineDash: stroke?.lineDash,
         // lineCap: stroke.lineCap||'round',
-        lineDashOffset: stroke?.lineDashOffset || 0,
+        lineDashOffset: stroke?.lineDashOffset,
         // lineJoin: stroke.lineJoin||'round',
         miterLimit: stroke?.miterLimit
       }),
       image: imageStyle,
       text: new Text({
         fill: new Fill({
-          color: text?.color || '#000000'
+          color: text?.color
         }),
-        text: text?.text || '',
-        scale: 1.5,
+        text: text?.text,
+        scale: text?.scale,
         // font: 'bold italic 16px 仿宋',
-        font: text?.font || '10px 黑体',
-        overflow: false,
-        offsetX: 0,
-        offsetY: 0
+        font: text?.font,
+        overflow: text?.overflow,
+        offsetX: text?.offsetX,
+        offsetY: text?.offsetY
       })
     })
     // }
@@ -453,22 +458,16 @@ export class OlMapService {
       this.map.addInteraction(this.draw);
       this.backout();
       this.createHelpTooltip();
-      this.createMeasureTooltip();
+      // this.createMeasureTooltip();
       this.snap = new Snap({ source: this.mapLayerSource });
       this.modify = new Modify({ source: this.mapLayerSource });
-      // let output: string;
       this.draw.on('drawstart', (evt) => {
-        // output = '';
-        // set sketch
         this.sketch = evt.feature;
-        // @ts-ignore
-        // let tooltipCoord: Coordinate = evt.coordinate;
-        let listener: EventsKey;
-        listener = this.sketch.getGeometry().on('change', (change) => {
-          const result = this.getMeasureData(change.target);
-          this.measureTooltipElement.innerHTML = result.measureData;
-          this.measureTooltip.setPosition(result.tooltipCoord);
-        });
+        // let listener: EventsKey = this.sketch.getGeometry().on('change', (change) => {
+        //   const result = this.getMeasureData(change.target);
+        //   this.measureTooltipElement.innerHTML = result.measureData;
+        //   this.measureTooltip.setPosition(result.tooltipCoord);
+        // });
       });
       this.draw.on('drawend', (e) => {
         // e.feature.setProperties({ measure: output })
@@ -493,32 +492,6 @@ export class OlMapService {
    * @returns 根据传入条件返回geojson或feature
    */
   drawendHandle(e: DrawEvent, isGeojson: boolean = true): Feature<Geometry> | string {
-    // let style = this.createStyle(this.plotStyle);
-    // let { text, image } = this.plotStyle;
-    // e.feature.setStyle(style);
-    // if (textStr) {
-    // if (type !== 'Point') {
-    //   text.offsetY = 1;
-    // }
-    // style.setText(new Text({
-    //   // text: textStr,
-    //   // scale: text.scale || 1.5,
-    //   // offsetY: text.offsetY || -35
-    // }));
-    // e.feature.setStyle(style);
-    // }
-    // if (imageUrl) {
-    //   style.setImage(new Icon({
-    //     src: imageUrl,
-    //     // scale: image.scale || .15,
-    //     // anchor: image.anchor || [110, 20],
-    //     anchorOrigin: IconOrigin.BOTTOM_LEFT,
-    //     anchorXUnits: IconAnchorUnits.PIXELS,
-    //     anchorYUnits: IconAnchorUnits.PIXELS
-    //   }));
-    //   // e.feature.setStyle(style);
-    // }
-    // e.feature.setStyle(style);
     if (!e.feature.getId()) {
       e.feature.setId(this.newGuid());
     }
@@ -593,7 +566,10 @@ export class OlMapService {
     if (style instanceof Style) {
       feature.setStyle(style);
     } else {
-      const { stroke, fill, image, text } = style as BaseStyle;
+      const stroke = style.stroke;
+      const fill = style.fill;
+      const image = style.image;
+      const text = style.text;
       const newStyleBase: BaseStyle = {
         fill: fill,
         image: image,
@@ -651,7 +627,10 @@ export class OlMapService {
     this.map.removeInteraction(this.layerForDelete);
     unByKey(this.deleteEventKey);
     unByKey(this.pointermoveEvent);
-    this.helpTooltipElement && this.helpTooltipElement.classList.add('hidden');
+    if (this.helpTooltipElement) {
+      this.helpTooltipElement.classList.add('hidden');
+      this.helpTooltipElement.innerHTML = '';
+    }
     document.onkeypress = () => { };
   }
 
@@ -1045,6 +1024,7 @@ export class OlMapService {
    */
   showPopup(container: HTMLElement, coordinate: Array<number>, overlayId: string) {
     const overlay = new Overlay({
+      position: coordinate,
       element: container,
       id: overlayId,
       autoPan: true,
@@ -1052,7 +1032,7 @@ export class OlMapService {
         duration: 250,
       }
     });
-    overlay.setPosition(coordinate);
+    overlay.setPositioning(OverlayPositioning.BOTTOM_CENTER);
     this.map.addOverlay(overlay);
   }
   /**
@@ -1203,7 +1183,7 @@ export class OlMapService {
     this.helpTooltipElement.classList.remove('hidden');
   };
   /**
-   * 创建提示语
+   * 创建绘制过程步骤提示语
    */
   createHelpTooltip() {
     if (this.helpTooltipElement) {
@@ -1220,7 +1200,7 @@ export class OlMapService {
     this.map.addOverlay(this.helpTooltip);
   }
   /**
-   * 创建测量提示
+   * 创建绘制过程测量结果
    */
   createMeasureTooltip() {
     if (this.measureTooltipElement) {
