@@ -16,22 +16,6 @@
   </div>
   <ul class="properties-panel" *ngIf="hiddenPanel">
     <span class="close-panel" (click)="closePanel()">X</span>
-    <!-- <li class="setting-item">
-      <label>线条颜色</label>
-      <div class="color-container">
-        <span class="color-block"
-          [ngStyle]="{'background-color': item,'border-color':currentStrokeColor===item?'#000':'transparent'}"
-          *ngFor="let item of strokeColors;let i=index" (click)="chooseColor(item,'stroke')"></span>
-      </div>
-    </li>
-    <li class="setting-item">
-      <label>填充颜色</label>
-      <div class="color-container">
-        <span class="color-block"
-          [ngStyle]="{'background-color': item,'border-color':currentFillColor===item?'#000':'transparent'}"
-          *ngFor="let item of fillColors;let i=index" (click)="chooseColor(item,'fill')"></span>
-      </div>
-    </li> -->
     <li class="setting-item">
       <label>图层名称</label>
       <input rows="4" nz-input [(ngModel)]="layerName" (ngModelChange)="setProperty()" />
@@ -117,23 +101,20 @@
   <div class="map" id="map-container"></div>
 </div>
 <div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
-<!-- <button (click)="addInteractions('Point')">点</button>
-<button (click)="addInteractions('LineString')">线</button>
-<button (click)="addInteractions('Polygon')">面</button>
-<button (click)="addInteractions('Circle')">圆</button> -->
-<button (click)="addInteractions('Square')">正方形</button>
-<button (click)="addInteractions('Box')">长方形</button>
-<!-- <button (click)="deleteLayer()">单击删除图层</button> -->
-<!-- <button (click)="clearLayer()">全部清空</button> -->
-<button (click)="addPoint()">撒点</button>
-<button (click)="showPolyline()">撒线</button>
-<button (click)="showPolygon()">撒面</button>
-<button (click)="showCircle()">撒圆</button>
-<button (click)="showSquare()">撒正方形</button>
+<button (click)="draw('Square')">正方形</button>
+<button (click)="draw('Box')">长方形</button>
+
+<button (click)="dataOnMap('Point')">撒点</button>
+<button (click)="dataOnMap('LineString')">撒线</button>
+<button (click)="dataOnMap('Polygon')">撒面</button>
+<button (click)="dataOnMap('Circle')">撒圆</button>
+<button (click)="dataOnMap('Square')">撒正方形</button>
+
 <button (click)="clearInteraction()">关闭编辑/绘制</button>
 <button (click)="editLayer()">编辑</button>
 <button (click)="openPopup()">popup展示,要点击feature</button>
-
+<button (click)="mapClick()">地图点击事件</button>
+<button (click)="getAllFeatures()">获取所有图层</button>
 
 <button (click)="showHeatMap()">热力图</button>
 <button (click)="closeHeatMap()">关闭热力图</button>
@@ -141,7 +122,5 @@
 <button (click)="closeClusterMap()">关闭聚合图</button>
 <button (click)="markerAnimation()">轨迹图</button>
 <button (click)="changeAnimation()">{{ markText }}</button>
-<button (click)="mapClick()">地图点击事件</button>
-<button (click)="getAllFeatures()">获取所有图层</button>
 
 <button (click)="test()">远端测试</button>

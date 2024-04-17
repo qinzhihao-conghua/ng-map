@@ -34,7 +34,7 @@ export class XzqhComponent implements OnInit {
   }
 
   dataToMap() {
-    this.mapInstance.showPolygon((shanghai as any).default);
+    this.mapInstance.geojsonDataOnMap((shanghai as any).default);
   }
   clickToGetFeature() {
     this.mapInstance.activeFeature();
