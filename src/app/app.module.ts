@@ -5,7 +5,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { AreaMapNewComponent } from './area-map-new/area-map-new.component';
+import { MapPlotComponent } from './map-plot/map-plot.component';
 import { ImageMapComponent } from './image-map/image-map.component';
 import { MapabcComponent } from './mapabc/mapabc.component';
 import { MinemapComponent } from './minemap/minemap.component';
@@ -17,7 +17,7 @@ import { AreaMapComponent } from './area-map/area-map.component';
   declarations: [
     AppComponent,
     OlBdMapComponent,
-    AreaMapNewComponent,
+    MapPlotComponent,
     MapabcComponent,
     MinemapComponent,
     ImageMapComponent,
