@@ -114,7 +114,7 @@ export class OlMapService {
    * 标绘图标的样式信息，记录传入的配置样式
    */
   plotStyle: BaseStyle = new BaseStyle();
-  clusterEventKey: EventsKey;
+  clusterEventKey: Array<EventsKey> = [];
   clusterSource: Cluster;
   markObj: any = {};
   /** 正在绘制的 feature */
@@ -222,36 +222,37 @@ export class OlMapService {
   /**
    * 激活当前图层
    */
-  activeFeature() {
-    this.clickToGetFeature().subscribe(feature => {
-      const newFeature = feature.clone();
-      const highlightStyle = new Style({
-        stroke: new Stroke({
-          color: '#4CAF50',
-          width: 2,
-        }),
+  activeFeature(feature: Feature) {
+    if (!feature) { return }
+    // this.clickToGetFeature().subscribe(feature => {
+    const newFeature = feature.clone();
+    const highlightStyle = new Style({
+      stroke: new Stroke({
+        color: '#4CAF50',
+        width: 2,
+      }),
+    });
+    newFeature.setStyle(highlightStyle);
+    if (!this.viewLayer) {
+      this.viewLayer = new VectorLayer({
+        source: new VectorSource(),
+        map: this.map,
+        // style: highlightStyle
       });
-      newFeature.setStyle(highlightStyle);
-      if (!this.viewLayer) {
-        this.viewLayer = new VectorLayer({
-          source: new VectorSource(),
-          map: this.map,
-          // style: highlightStyle
-        });
-      }
-      this.viewLayer.getSource().clear();
-      this.viewLayer.getSource().addFeature(newFeature);
-      // TODO:有可能存在多选的操作，后面在说
-      // if (newFeature !== this.highlight) {
-      //   if (this.highlight) {
-      //     this.featureOverlay.getSource().removeFeature(this.highlight);
-      //   }
-      //   if (newFeature) {
-      //     this.featureOverlay.getSource().addFeature(newFeature);
-      //   }
-      //   this.highlight = newFeature;
-      // }
-    })
+    }
+    this.viewLayer.getSource().clear();
+    this.viewLayer.getSource().addFeature(newFeature);
+    // TODO:有可能存在多选的操作，后面在说
+    // if (newFeature !== this.highlight) {
+    //   if (this.highlight) {
+    //     this.featureOverlay.getSource().removeFeature(this.highlight);
+    //   }
+    //   if (newFeature) {
+    //     this.featureOverlay.getSource().addFeature(newFeature);
+    //   }
+    //   this.highlight = newFeature;
+    // }
+    // })
   }
   /**
    * 点击获取feature
@@ -1006,17 +1007,21 @@ export class OlMapService {
         return style;
       },
     });
-    this.clusterEventKey = this.clusterClickEven(clustersLayer);
+    this.clusterEventKey.push(this.clusterClickEven(clustersLayer));
     this.map.addLayer(clustersLayer);
     return { source: this.clusterSource, layer: clustersLayer }
   }
   /**
-   * 关闭聚合图
-   * @param clusterLayer 聚合图层
+   * 关闭聚合图，如果传入图层数组，则只删除对应的图层，否则清空
+   * @param clusterLayers 聚合图层
    */
-  closeClusterMap(clusterLayer: any) {
+  closeClusterMap(clusterLayers?: Array<any>) {
     unByKey(this.clusterEventKey);
-    this.map.removeLayer(clusterLayer);
+    if (clusterLayers && clusterLayers.length > 0) {
+      clusterLayers.map(item => this.map.removeLayer(item))
+    } else {
+      this.clusterSource.clear()
+    }
   }
   /**
    * 聚合图点击
@@ -1124,7 +1129,7 @@ export class OlMapService {
       'icon': new Style({
         image: new Icon({
           anchor: [0.5, 1],
-          src: 'assets/img/location.png',
+          src: 'assets/location.jpg',
           scale: .15
         }),
       }),

@@ -37,7 +37,7 @@ export class XzqhComponent implements OnInit {
     this.mapInstance.geojsonDataOnMap((shanghai as any).default);
   }
   clickToGetFeature() {
-    this.mapInstance.activeFeature();
+    // this.mapInstance.activeFeature();
   }
 
 }
