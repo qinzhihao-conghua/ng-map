@@ -10,6 +10,7 @@ import Point from 'ol/geom/Point';
 import * as turf from '@turf/turf';
 import { BaseStyle, TextStyle } from '../service/base-type';
 import { Circle } from 'ol/geom';
+import { GeoJsonCollectionType } from '../service/geojson-type';
 
 @Component({
   selector: 'area-map-new',
@@ -85,7 +86,7 @@ export class AreaMapNewComponent implements OnInit {
   markDisabled = true;
   fontType: Array<string> = ['宋体', '微软雅黑', '仿宋', '黑体', '方正', '华文隶书', '等线', '华文行楷', 'sans-serif'];
   fontSize: number = 16;
-  fontColr: string;
+  fontColr: string = '#000000';
   fontFamily: string = '黑体';
   fontItalic: boolean = false;
   fontWeight: boolean = false;
@@ -108,7 +109,7 @@ export class AreaMapNewComponent implements OnInit {
   ngOnChanges(changes: SimpleChanges) {
     if (changes.geojsonData && changes.geojsonData.currentValue) {
       console.log('回显数据', this.geojsonData);
-      this.mapInstance.showPolygon(this.geojsonData);
+      this.mapInstance.geojsonDataOnMap(this.geojsonData);
     }
     if (changes.showTools && !changes.showTools.currentValue) {
       this.closePanel();
@@ -134,9 +135,13 @@ export class AreaMapNewComponent implements OnInit {
       case 'LineString':
       case 'Polygon':
       case 'Circle':
+      case 'Square':
+      case 'Box':
         const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
-        this.mapInstance.addInteractions(type, false, false).subscribe((data: Feature) => {
-          this.activeFeature(data);
+        this.mapInstance.addInteractions(type, false, true, imgSrc).subscribe((data: Feature | GeoJsonCollectionType) => {
+          console.log('绘制结果', data);
+          // console.log('绘制结果', JSON.parse(data));
+          // this.activeFeature(data);
           // this.layerName = data.getProperties()['measure']
           // setTimeout(() => {
           //   this.setProperty();
@@ -203,6 +208,10 @@ export class AreaMapNewComponent implements OnInit {
     // }
   }
   setProperty() {
+    if (!this.currentFeature) {
+      console.log('没有选择图形要素');
+      return;
+    }
     const style: BaseStyle = {
       stroke: {
         color: this.mapInstance.hexToRgba(this.currentStrokeColor, this.strokeColorOpacity),
@@ -357,11 +366,11 @@ export class AreaMapNewComponent implements OnInit {
     this.mapInstance.closeClickEvent();
     this.mapInstance.closeOverlay('test');
   }
-  addInteractions(type: string) {
-    this.mapInstance.addInteractions(type).subscribe((data: string) => {
-      console.log('绘制结果', JSON.parse(data));
-    });
-  }
+  // addInteractions(type: string) {
+  //   this.mapInstance.addInteractions(type).subscribe((data: string) => {
+  //     console.log('绘制结果', JSON.parse(data));
+  //   });
+  // }
   deleteLayer() {
     this.mapInstance.deleteLayer().subscribe(data => {
       console.log('删除结果', data);
@@ -376,16 +385,34 @@ export class AreaMapNewComponent implements OnInit {
   addPoint() {
     this.mapInstance.showPoint(this.geojson.Points);
   }
-  showPolyline() {
-    this.mapInstance.showPolyline(this.geojson.line);
+  dataOnMap(type: string) {
+    let geojson;
+    if (type === 'Point') {
+      geojson = this.geojson.Points;
+    } else if (type === 'LineString') {
+      geojson = this.geojson.line;
+    } else if (type === 'Polygon') {
+      geojson = this.geojson.Polygon;
+    } else if (type === 'Circle') {
+      geojson = this.geojson.Circle;
+    } else if (type === 'Square') {
+      geojson = this.geojson.Square;
+    } else if (type === 'Box') {
+      geojson = this.geojson.Box;
+    }
+    this.mapInstance.geojsonDataOnMap(geojson as GeoJsonCollectionType);
+
   }
-  showPolygon() {
-    this.mapInstance.showPolygon(this.geojson.Polygon);
-  }
-  showCircle() {
-    // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
-    this.mapInstance.showPolygon(this.geojson.Circle);
-  }
+  // showPolyline() {
+  //   this.mapInstance.showPolyline(this.geojson.line);
+  // }
+  // showPolygon() {
+  //   this.mapInstance.geojsonDataOnMap(this.geojson.Polygon as GeoJsonCollectionType);
+  // }
+  // showCircle() {
+  //   // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
+  //   this.mapInstance.geojsonDataOnMap(this.geojson.Circle as GeoJsonCollectionType);
+  // }
   showSquare() {
     this.mapInstance.showSquare(this.geojson.Square);
   }
@@ -449,6 +476,6 @@ export class AreaMapNewComponent implements OnInit {
     let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
     const result = await this.http.post(url, null).toPromise();
     console.log('---------', result);
-    this.mapInstance.showPolygon(result);
+    this.mapInstance.geojsonDataOnMap(result as GeoJsonCollectionType);
   }
 }

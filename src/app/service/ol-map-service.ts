@@ -46,6 +46,7 @@ import OverlayPositioning from 'ol/OverlayPositioning';
 import { getArea, getLength } from 'ol/sphere';
 import { BaseStyle, ClusterStyle, LayerOption } from './base-type';
 import { EventsKey } from 'ol/events';
+import { GeoJsonCollectionType, GeoJsonItemType } from './geojson-type';
 
 
 export class OlMapService {
@@ -361,6 +362,28 @@ export class OlMapService {
     }
     return hex;
   };
+  // createImageStyle(type:string,iconSrc:string){
+  //   let imageStyle = null;
+  //   if (type === 'icon'||(type === 'Point' && iconSrc)) {
+  //     imageStyle = new Icon({
+  //       src: image?.src,
+  //       // 图片缩放
+  //       scale: image?.scale,
+  //       anchor: image?.anchor,
+  //       crossOrigin: image?.crossOrigin
+  //     })
+  //   } else {
+  //     imageStyle = new CircleStyle({ // 作用于点标注
+  //       radius: 7,
+  //       stroke: new Stroke({
+  //         color: strokeColor || '#fff'
+  //       }),
+  //       fill: new Fill({
+  //         color: pointColor|| '#06fb68'
+  //       })
+  //     })
+  //   }
+  // }
   /**
    * 生成基本样式
    * @returns 
@@ -426,18 +449,16 @@ export class OlMapService {
    * @param type 绘制图形类型:
    * None:无;Point:点;LineString:线;
    * Polygon:面;Circle:圆;Square:正方形;Box:长方形
-   * @param text 标绘后添加的文本，注意，当传入的文本长度超过绘制的图形长度，文本将不会显示
-   * @param imageUrl 点图标使用图片展示时，图片的路径
    * @param succession 是否连续绘制
    * @param isGeojson 是否返回geojson，默认是true
+   * @param imgSrc 点图标的路径
    * @returns 根据传入条件返回geojson或feature
    */
-  addInteractions(type: any, succession?: boolean, isGeojson: boolean = true): Observable<string | Feature<Geometry>> {
+  addInteractions(type: any, succession: boolean, isGeojson: boolean, imgSrc?: string): Observable<string | Feature<Geometry> | GeoJsonCollectionType> {
     if (type !== 'None') {
       this.clearInteraction();
-      // 
       // const subject = new Subject();
-      const subject = new Observable<string | Feature<Geometry>>();
+      const subject = new Observable<string | Feature<Geometry> | GeoJsonCollectionType>();
       let drawType = type;
       let geometryFunction;
       // let style = (this.operationLayers.getStyle() as Style);
@@ -471,12 +492,12 @@ export class OlMapService {
       });
       this.draw.on('drawend', (e) => {
         // e.feature.setProperties({ measure: output })
-        const result = this.drawendHandle(e, isGeojson);
+        const result = this.drawendHandle(e, isGeojson) as string;
         // 绘制结束后关闭交互，不手动关闭将会一直可以添加绘制
         if (!succession) {
           this.clearInteraction();
         }
-        subject.next(result);
+        subject.next(JSON.parse(result));
       });
       this.pointermoveEvent = this.map.on('pointermove', this.pointerMoveHandler);
       return subject;
@@ -562,19 +583,14 @@ export class OlMapService {
    * @param properties 要设置的属性
    */
   setFeatureStyle(feature: Feature, style: Style | BaseStyle, properties?: object) {
-    // TODO:重写这部分
     if (style instanceof Style) {
       feature.setStyle(style);
     } else {
-      const stroke = style.stroke;
-      const fill = style.fill;
-      const image = style.image;
-      const text = style.text;
       const newStyleBase: BaseStyle = {
-        fill: fill,
-        image: image,
-        stroke: stroke,
-        text: text
+        fill: style.fill,
+        image: style.image,
+        stroke: style.stroke,
+        text: style.text
       };
       let newStyle = this.createStyle(newStyleBase);
       feature.setStyle(newStyle);
@@ -750,19 +766,37 @@ export class OlMapService {
    * @param features 将geojson数据转成features后的数据
    * @returns
    */
-  setStyleByProperties(geojsonData, features: Array<Feature>) {
+  setStyleByProperties(geojsonData: GeoJsonCollectionType, features: Array<Feature>) {
     const resultFeatures = [];
     geojsonData.features.forEach((item, index) => {
       const style = item.properties ? item.properties.style : null;
       let styleInstance = new Style({
         stroke: new Stroke({
-          color: index > 8 ? '#000' : '#ff3300'
+          color: this.plotStyle.stroke.color
         }),
         fill: new Fill({
-          color: index > 8 ? 'rgba(255,255,255,.5)' : 'rgba(50,250,3,.5)'
+          color: this.plotStyle.fill
         }),
       });
       if (style) {
+        let imageStyle;
+        if (item.geometry.type === 'Point' && style.pointImageUrl) {
+          imageStyle = new Icon({
+            src: style.pointImageUrl,
+            anchor: [0.5, 1],
+            scale: .15
+          })
+        } else {
+          imageStyle = new CircleStyle({
+            radius: style.radius || 7,
+            stroke: new Stroke({
+              color: style.strokeColor || '#fff',
+            }),
+            fill: new Fill({
+              color: style.fillColor || '#06fb68',
+            }),
+          })
+        }
         styleInstance = new Style({
           stroke: new Stroke({
             color: style.strokeColor
@@ -774,11 +808,7 @@ export class OlMapService {
             text: style.text,
             scale: 1.5
           }),
-          image: new Icon({
-            src: style.pointImageUrl,
-            anchor: [0.5, 1],
-            scale: .15
-          })
+          image: imageStyle
         })
       }
       if (item.properties && item.properties.subType === 'Circle') {
@@ -793,9 +823,11 @@ export class OlMapService {
         const circleFeature = new Feature({ geometry });
         circleFeature.setStyle(styleInstance);
         circleFeature.setProperties({ ...item.properties });
+        circleFeature.setId(item.id || this.newGuid())
         resultFeatures.push(circleFeature);
       } else {
         features[index].setStyle(styleInstance);
+        features[index].setId(features[index].getId() || this.newGuid());
         resultFeatures.push(features[index]);
       }
     });
@@ -825,24 +857,33 @@ export class OlMapService {
    * 撒线
    * @param geoLine geojson线数据
    */
-  showPolyline(geoLine: object) {
-    const line = new GeoJSON().readFeatures(geoLine);
-    this.mapLayerSource.addFeatures(line);
-    this.setFeaturesCenter(geoLine);
-    this.clearInteraction();
-  }
+  // showPolyline(geoLine: object) {
+  //   const line = new GeoJSON().readFeatures(geoLine);
+  //   this.mapLayerSource.addFeatures(line);
+  //   this.setFeaturesCenter(geoLine);
+  //   this.clearInteraction();
+  // }
   /**
-   * 撒多边形，可以撒所有图形
-   * @param geoPolygon geojson多边形数据
+   * geojson数据上图
+   * @param geoPolygon geojson数据
    */
-  showPolygon(geoPolygon: any) {
-    const polygons = new GeoJSON().readFeatures(geoPolygon);
+  geojsonDataOnMap(geoPolygon: GeoJsonCollectionType | GeoJsonItemType) {
+    // @ts-ignore
+    let resultGeo: GeoJsonCollectionType = geoPolygon;
+    if (geoPolygon.type === 'Feature') {
+      resultGeo = {
+        type: 'FeatureCollection',
+        features: [(geoPolygon as GeoJsonItemType)]
+      }
+    }
+    // new GeoJSON().readFeature(geoSquare);
+    const polygons = new GeoJSON().readFeatures(resultGeo);
     let result = null;
-    if (geoPolygon.type === 'FeatureCollection') {
-      result = this.setStyleByProperties(geoPolygon, polygons);
+    if (resultGeo.type === 'FeatureCollection') {
+      result = this.setStyleByProperties(resultGeo, polygons);
     }
     this.mapLayerSource.addFeatures(result);
-    this.setFeaturesCenter(geoPolygon);
+    this.setFeaturesCenter(resultGeo);
     this.clearInteraction();
   }
   /**
