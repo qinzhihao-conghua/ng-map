@@ -3,93 +3,101 @@
     <span class="icon-location" title="点" (click)="draw('Point')" [ngClass]="acticeType==='Point'?'active':''"></span>
     <span class="icon-select-line" title="线" (click)="draw('LineString')"
       [ngClass]="acticeType==='LineString'?'active':''"></span>
-    <span class="icon-checkbox-unchecked" title="面" (click)="draw('Polygon')"
+    <span class="icon-polygon" title="面" (click)="draw('Polygon')"
       [ngClass]="acticeType==='Polygon'?'active':''"></span>
-    <span class="icon-radio-unchecked" title="圆" (click)="draw('Circle')"
-      [ngClass]="acticeType==='Circle'?'active':''"></span>
-    <span class="icon-point-up" title="抓手点击" (click)="draw('hand')" [ngClass]="acticeType==='hand'?'active':''"></span>
+    <span class="icon-radio" title="圆" (click)="draw('Circle')" [ngClass]="acticeType==='Circle'?'active':''"></span>
+    <span class="icon-checkbox" title="正方形" (click)="draw('Square')"
+      [ngClass]="acticeType==='Square'?'active':''"></span>
+    <span class="icon-box" title="长方形" (click)="draw('Box')" [ngClass]="acticeType==='Box'?'active':''"></span>
+    <span class="icon-point-up" title="点击要素编辑样式" (click)="draw('hand')"
+      [ngClass]="acticeType==='hand'?'active':''"></span>
     <span class="icon-edit" title="编辑" (click)="draw('edit')" [ngClass]="acticeType==='edit'?'active':''"></span>
-    <span class="icon-cancel" title="取消绘制" (click)="draw(null)" [ngClass]="acticeType===''?'active':''"></span>
-    <span class="icon-delete3" title="删除" (click)="draw('delete')" [ngClass]="acticeType==='delete'?'active':''"></span>
+    <span class="icon-cancel" title="取消绘制/编辑" (click)="draw(null)" [ngClass]="acticeType===''?'active':''"></span>
+    <span class="icon-delete" title="删除" (click)="draw('delete')" [ngClass]="acticeType==='delete'?'active':''"></span>
     <span class="icon-download" title="导出图片" (click)="exportPng()"></span>
     <span class="icon-clean" title="清空" (click)="draw('clear')" [ngClass]="acticeType===''?'active':''"></span>
   </div>
-  <ul class="properties-panel" *ngIf="hiddenPanel">
-    <span class="close-panel" (click)="closePanel()">X</span>
-    <li class="setting-item">
-      <label>图层名称</label>
-      <input rows="4" nz-input [(ngModel)]="layerName" (ngModelChange)="setProperty()" />
-    </li>
-    <li class="setting-item">
-      <label>图层描述</label>
-      <textarea rows="4" nz-input [(ngModel)]="layerDesc" (ngModelChange)="setProperty()"></textarea>
-    </li>
-    <li class="setting-item column-item">
-      <label>字体设置</label>
-      <div class="item-style">
-        <div class="sub-item">
-          <label>字体</label>
-          <select [(ngModel)]="fontFamily" (ngModelChange)="setProperty()">
-            <option *ngFor="let item of fontType">{{item}}</option>
-          </select>
+  <div class="setting-style">
+    <div class="setting-title">
+      <span style="font-size: 18px;">设置样式</span>
+      <span class="close-panel" (click)="closePanel()">X</span>
+    </div>
+    <ul class="properties-panel" *ngIf="hiddenPanel">
+      <li class="setting-item">
+        <label>图层名称</label>
+        <input rows="4" nz-input [(ngModel)]="layerName" (ngModelChange)="setProperty()" />
+      </li>
+      <li class="setting-item">
+        <label>图层描述</label>
+        <textarea rows="4" nz-input [(ngModel)]="layerDesc" (ngModelChange)="setProperty()"></textarea>
+      </li>
+      <li class="setting-item column-item">
+        <label>字体设置</label>
+        <div class="item-style">
+          <div class="sub-item">
+            <label>字体</label>
+            <select [(ngModel)]="fontFamily" (ngModelChange)="setProperty()">
+              <option *ngFor="let item of fontType">{{item}}</option>
+            </select>
+          </div>
+          <div class="sub-item">
+            <label>字体大小</label>
+            <input type="number" [(ngModel)]="fontSize" (ngModelChange)="setProperty()">
+          </div>
+          <div class="sub-item">
+            <label>字体颜色</label>
+            <input type="color" [(ngModel)]="fontColr" (ngModelChange)="setProperty()">
+          </div>
+          <div class="sub-item">
+            <label>字体粗细</label>
+            <input type="checkbox" [(ngModel)]="fontWeight" (ngModelChange)="setProperty()">加粗
+          </div>
+          <div class="sub-item">
+            <label>字体倾斜</label>
+            <input type="checkbox" [(ngModel)]="fontItalic" (ngModelChange)="setProperty()">倾斜
+          </div>
         </div>
-        <div class="sub-item">
-          <label>字体大小</label>
-          <input type="number" [(ngModel)]="fontSize" (ngModelChange)="setProperty()">
+      </li>
+      <li class="setting-item column-item">
+        <label>线条设置</label>
+        <div class="item-style">
+          <div class="sub-item">
+            <label>线型</label>
+            <select [(ngModel)]="lineDash" (ngModelChange)="setProperty()">
+              <option *ngFor="let item of lineDashType" [value]='item.key'>{{item.value}}</option>
+            </select>
+          </div>
+          <div class="sub-item">
+            <label>线条粗细</label>
+            <input type="number" [(ngModel)]="strokeWidth" (ngModelChange)="setProperty()">
+          </div>
+          <div class="sub-item">
+            <label>线条颜色</label>
+            <input type="color" [(ngModel)]="currentStrokeColor" (ngModelChange)="setProperty()">
+          </div>
+          <div class="sub-item">
+            <label>线条透明度</label>
+            <input type="number" min="0" max="1" step="0.1" [(ngModel)]="strokeColorOpacity"
+              (ngModelChange)="setProperty()">
+          </div>
         </div>
-        <div class="sub-item">
-          <label>字体颜色</label>
-          <input type="color" [(ngModel)]="fontColr" (ngModelChange)="setProperty()">
+      </li>
+      <li class="setting-item column-item">
+        <label>填充设置</label>
+        <div class="item-style">
+          <div class="sub-item">
+            <label>填充颜色</label>
+            <input type="color" [(ngModel)]="currentFillColor" (ngModelChange)="setProperty()">
+          </div>
+          <div class="sub-item">
+            <label>填充透明度</label>
+            <input type="number" min="0" max="1" step="0.1" [(ngModel)]="fillColorOpacity"
+              (ngModelChange)="setProperty()">
+          </div>
         </div>
-        <div class="sub-item">
-          <label>字体粗细</label>
-          <input type="checkbox" [(ngModel)]="fontWeight" (ngModelChange)="setProperty()">加粗
-        </div>
-        <div class="sub-item">
-          <label>字体倾斜</label>
-          <input type="checkbox" [(ngModel)]="fontItalic" (ngModelChange)="setProperty()">倾斜
-        </div>
-      </div>
-    </li>
-    <li class="setting-item column-item">
-      <label>线条设置</label>
-      <div class="item-style">
-        <div class="sub-item">
-          <label>线型</label>
-          <select [(ngModel)]="lineDash" (ngModelChange)="setProperty()">
-            <option *ngFor="let item of lineDashType" [value]='item.key'>{{item.value}}</option>
-          </select>
-        </div>
-        <div class="sub-item">
-          <label>线条粗细</label>
-          <input type="number" [(ngModel)]="strokeWidth" (ngModelChange)="setProperty()">
-        </div>
-        <div class="sub-item">
-          <label>线条颜色</label>
-          <input type="color" [(ngModel)]="currentStrokeColor" (ngModelChange)="setProperty()">
-        </div>
-        <div class="sub-item">
-          <label>线条透明度</label>
-          <input type="number" min="0" max="1" step="0.1" [(ngModel)]="strokeColorOpacity"
-            (ngModelChange)="setProperty()">
-        </div>
-      </div>
-    </li>
-    <li class="setting-item column-item">
-      <label>填充设置</label>
-      <div class="item-style">
-        <div class="sub-item">
-          <label>填充颜色</label>
-          <input type="color" [(ngModel)]="currentFillColor" (ngModelChange)="setProperty()">
-        </div>
-        <div class="sub-item">
-          <label>填充透明度</label>
-          <input type="number" min="0" max="1" step="0.1" [(ngModel)]="fillColorOpacity"
-            (ngModelChange)="setProperty()">
-        </div>
-      </div>
-    </li>
-  </ul>
+      </li>
+    </ul>
+  </div>
   <div id="popup" class="ol-popup">
     <div class="popup-title">
       <span>属性信息</span>
@@ -101,8 +109,6 @@
   <div class="map" id="map-container"></div>
 </div>
 <div>经度：{{coordinate[0]}}纬度：{{coordinate[1]}}</div>
-<button (click)="draw('Square')">正方形</button>
-<button (click)="draw('Box')">长方形</button>
 
 <button (click)="dataOnMap('Point')">撒点</button>
 <button (click)="dataOnMap('LineString')">撒线</button>
@@ -110,8 +116,6 @@
 <button (click)="dataOnMap('Circle')">撒圆</button>
 <button (click)="dataOnMap('Square')">撒正方形</button>
 
-<button (click)="clearInteraction()">关闭编辑/绘制</button>
-<button (click)="editLayer()">编辑</button>
 <button (click)="openPopup()">popup展示,要点击feature</button>
 <button (click)="mapClick()">地图点击事件</button>
 <button (click)="getAllFeatures()">获取所有图层</button>

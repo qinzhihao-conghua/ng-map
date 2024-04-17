@@ -81,7 +81,7 @@ export class MapPlotComponent implements OnInit {
   // map: Map;
   markText = '开始移动';
   heatMapLayer = null;
-  clusterMapLayer = null;
+  clusterMapLayer = [];
   markerAnimationLayer = null;
   markDisabled = true;
   fontType: Array<string> = ['宋体', '微软雅黑', '仿宋', '黑体', '方正', '华文隶书', '等线', '华文行楷', 'sans-serif'];
@@ -202,10 +202,7 @@ export class MapPlotComponent implements OnInit {
   activeFeature(feature: Feature) {
     this.currentFeature = feature;
     this.hiddenPanel = true;
-    // if (this.currentFeature) {
-    //   (this.currentFeature.getStyle() as Style).getStroke().setColor('#2196f3');
-    //   this.currentFeature.changed();
-    // }
+    // this.mapInstance.activeFeature(feature);
   }
   setProperty() {
     if (!this.currentFeature) {
@@ -224,7 +221,7 @@ export class MapPlotComponent implements OnInit {
         color: this.fontColr,
         font: `${this.fontWeight === true ? 'bold' : 'normal'} ${this.fontItalic === true ? 'italic' : 'normal'} normal ${this.fontSize}px ${this.fontFamily}`
       },
-      image: { type: '', src: 'assets/img/location.png' }
+      image: { type: '', src: 'assets/location.jpg' }
     }
     const properties = {
       name: this.layerName,
@@ -239,40 +236,7 @@ export class MapPlotComponent implements OnInit {
     let geojsonBack = this.mapInstance.featuresToGeojson(features);
     this.drawBackAllFeatures.emit(geojsonBack);
   }
-  addPopup(data) {
-    let center = null;
-    let json = null;
-    if (data.type === 'Circle') {
-      center = data.center;
-    } else {
-      json = JSON.parse(data);
-    }
-    console.log('绘制结果', json);
-    const dom = document.getElementById('popup');
-    dom.style.display = 'block';
-    const content = document.getElementById('popup-content');
-    content.innerHTML = `
-        <p>测试popup</p>
-        <p>测试popup</p>
-      `;
-    this.currentPopuId = this.mapInstance.newGuid();
-    let temp = [];
-    if (json && json.geometry.type === 'LineString') {
-      json.geometry.coordinates.forEach(item => {
-        temp.push(turf.point(item))
-      })
-    } else if (json && json.geometry.type === 'Polygon') {
-      json.geometry.coordinates[0].forEach(item => {
-        temp.push(turf.point(item))
-      })
-    } else if (json) {
-      temp.push(turf.point(json.geometry.coordinates))
-    }
-    const features = turf.featureCollection(temp);
 
-    center = center ? center : turf.center(features).geometry.coordinates;
-    this.mapInstance.showPopup(dom, center, this.currentPopuId)
-  }
   exportPng() {
     // postcompose rendercomplete
     this.map.once('rendercomplete', () => {
@@ -339,17 +303,20 @@ export class MapPlotComponent implements OnInit {
       console.log('点击返回', data);
       // if (features.length > 0) {
       console.log('features属性', data.getProperties());
-      console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      // console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      this.activeFeature(data);
       const measureData = this.mapInstance.getMeasureData(data);
+      const properties = data.getProperties();
+      const featureId = data.getId();
       console.log('测量数据', measureData);
       const dom = document.getElementById('popup');
       dom.style.display = 'block';
       const content = document.getElementById('popup-content');
       content.innerHTML = `
-            <p>${measureData.measureData}</p>
-            <p>测试popup</p>
-            <p>测试popup</p>
-            <p>测试popup</p>
+            <p><label style="width:90px;display: inline-block;">面积/长度：</label> ${measureData.measureData}</p>
+            <p><label style="width:90px;display: inline-block;">图层名称：</label> ${properties.name}</p>
+            <p><label style="width:90px;display: inline-block;">图层描述：</label> ${properties.desc}</p>
+            <p><label style="width:90px;display: inline-block;">要素id：</label> ${featureId}</p>
           `;
       // @ts-ignore
       let center = [];
@@ -382,9 +349,9 @@ export class MapPlotComponent implements OnInit {
     this.closeMarkerAnimation();
     this.mapInstance.clearLayer();
   }
-  addPoint() {
-    this.mapInstance.showPoint(this.geojson.Points);
-  }
+  // addPoint() {
+  //   this.mapInstance.showPoint(this.geojson.Points);
+  // }
   dataOnMap(type: string) {
     let geojson;
     if (type === 'Point') {
@@ -413,9 +380,9 @@ export class MapPlotComponent implements OnInit {
   //   // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
   //   this.mapInstance.geojsonDataOnMap(this.geojson.Circle as GeoJsonCollectionType);
   // }
-  showSquare() {
-    this.mapInstance.showSquare(this.geojson.Square);
-  }
+  // showSquare() {
+  //   this.mapInstance.showSquare(this.geojson.Square);
+  // }
   clearInteraction() {
     this.mapInstance.clearInteraction();
   }
@@ -438,7 +405,7 @@ export class MapPlotComponent implements OnInit {
       features[i] = new Feature(new Point(coordinates));
     }
     const result = this.mapInstance.showClusterMap(features);
-    this.clusterMapLayer = result.layer;
+    this.clusterMapLayer.push(result.layer);
   }
   closeClusterMap() {
     this.mapInstance.closeClusterMap(this.clusterMapLayer)

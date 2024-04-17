@@ -1,10 +1,10 @@
 @font-face {
   font-family: 'zh-font';
-  src:  url('fonts/zh-font.eot?xqh5ra');
-  src:  url('fonts/zh-font.eot?xqh5ra#iefix') format('embedded-opentype'),
-    url('fonts/zh-font.ttf?xqh5ra') format('truetype'),
-    url('fonts/zh-font.woff?xqh5ra') format('woff'),
-    url('fonts/zh-font.svg?xqh5ra#zh-font') format('svg');
+  src:  url('fonts/zh-font.eot?bpwd3t');
+  src:  url('fonts/zh-font.eot?bpwd3t#iefix') format('embedded-opentype'),
+    url('fonts/zh-font.ttf?bpwd3t') format('truetype'),
+    url('fonts/zh-font.woff?bpwd3t') format('woff'),
+    url('fonts/zh-font.svg?bpwd3t#zh-font') format('svg');
   font-weight: normal;
   font-style: normal;
   font-display: block;
@@ -25,11 +25,26 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.icon-box:before {
+  content: "\e900";
+}
+.icon-settings:before {
+  content: "\e903";
+}
+.icon-calculate:before {
+  content: "\e904";
+}
+.icon-east:before {
+  content: "\e905";
+}
+.icon-delete:before {
+  content: "\e906";
+}
+.icon-polygon:before {
+  content: "\e907";
+}
 .icon-cancel:before {
   content: "\ea8c";
-}
-.icon-delete3:before {
-  content: "\e980";
 }
 .icon-clean:before {
   content: "\ea2e";
@@ -46,10 +61,10 @@
 .icon-point-up:before {
   content: "\ea05";
 }
-.icon-checkbox-unchecked:before {
+.icon-checkbox:before {
   content: "\ea58";
 }
-.icon-radio-unchecked:before {
+.icon-radio:before {
   content: "\ea5f";
 }
 .icon-download:before {
