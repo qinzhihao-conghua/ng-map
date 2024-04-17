@@ -13,12 +13,12 @@ import { Circle } from 'ol/geom';
 import { GeoJsonCollectionType } from '../service/geojson-type';
 
 @Component({
-  selector: 'area-map-new',
-  templateUrl: './area-map-new.component.html',
-  styleUrls: ['./area-map-new.component.scss'],
+  selector: 'map-plot',
+  templateUrl: './map-plot.component.html',
+  styleUrls: ['./map-plot.component.scss'],
   // providers: [OlMapService]
 })
-export class AreaMapNewComponent implements OnInit {
+export class MapPlotComponent implements OnInit {
 
   /**
    * 覃智浩 2022年10月11日 14:53:36
