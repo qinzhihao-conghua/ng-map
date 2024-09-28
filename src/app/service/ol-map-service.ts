@@ -127,6 +127,7 @@ export class OlMapService {
   measureTooltipElement: HTMLElement;
   /** 展示测量提示的Overlay */
   measureTooltip: Overlay;
+  drawType: GeometryType;
   /**
    * 初始化地图，该service目标是脱离框架使用，因此基本地图配置项请从外部传入
    * @param targetId 地图容器id
@@ -447,7 +448,7 @@ export class OlMapService {
    * 添加交互图层，参考：
    * https://openlayers.org/en/latest/examples/draw-and-modify-features.html;
    * https://openlayers.org/en/latest/examples/draw-shapes.html
-   * @param type 绘制图形类型:
+   * @param type 绘制图形类型:实际上是GeometryType枚举中的类型
    * None:无;Point:点;LineString:线;
    * Polygon:面;Circle:圆;Square:正方形;Box:长方形
    * @param succession 是否连续绘制
@@ -460,19 +461,19 @@ export class OlMapService {
       this.clearInteraction();
       // const subject = new Subject();
       const subject = new Observable<string | Feature<Geometry> | GeoJsonCollectionType>();
-      let drawType = type;
+      this.drawType = type;
       let geometryFunction;
       // let style = (this.operationLayers.getStyle() as Style);
       if (type === 'Square') {
-        drawType = 'Circle';
+        this.drawType = GeometryType.CIRCLE;
         geometryFunction = createRegularPolygon(4);
       } else if (type === 'Box') {
-        drawType = 'Circle';
+        this.drawType = GeometryType.CIRCLE;
         geometryFunction = createBox();
       }
       this.draw = new Draw({
         source: this.mapLayerSource,
-        type: drawType,
+        type: this.drawType,
         geometryFunction,
         // 绘制时候的样式并不是最终的样式
         // style: style ? style : null
@@ -525,6 +526,8 @@ export class OlMapService {
     }
     // 关闭键盘监听
     document.onkeypress = null;
+    this.sketch = null;
+    this.drawType = null;
     return result;
   }
   /**
@@ -690,8 +693,8 @@ export class OlMapService {
     this.clearInteraction();
     // 清除水纹动画，但是会影响绘制单独的点
     unByKey(this.animateKeys);
-    this.mapLayerSource.clear();
-    this.clusterSource ? this.clusterSource.clear() : null
+    this.mapLayerSource && this.mapLayerSource.clear();
+    this.clusterSource && this.clusterSource.clear();
     this.map.render();
   }
 
@@ -1020,7 +1023,7 @@ export class OlMapService {
     if (clusterLayers && clusterLayers.length > 0) {
       clusterLayers.map(item => this.map.removeLayer(item))
     } else {
-      this.clusterSource.clear()
+      this.clusterSource && this.clusterSource.clear()
     }
   }
   /**
@@ -1095,6 +1098,7 @@ export class OlMapService {
     this.map.removeLayer(clusterLayer);
   }
   /**
+   * TODO:轨迹图层还没有处理清除的问题
    * 根据坐标点集合生成轨迹图层
    * @param routeCoords 坐标点集合
    * @returns 
@@ -1211,12 +1215,22 @@ export class OlMapService {
     if (evt.dragging) {
       return;
     }
-    let helpMsg = '点击开始绘制';
-
+    let helpMsg = '单击开始绘制';
+    if (this.drawType === GeometryType.POINT) {
+      helpMsg = '单击结束绘制';
+    } else if (this.drawType === GeometryType.CIRCLE) {
+      helpMsg = '单击开始绘制第一个点';
+    }
+    // 这里是移动过程中判断
     if (this.sketch) {
       const geom = this.sketch.getGeometry();
       if (geom instanceof Polygon) {
-        helpMsg = '单击继续绘制，双击结束绘制';
+        // 正方形和长方形此时是多边形类型，所以这里要通过drawType去精细判断
+        if (this.drawType === GeometryType.CIRCLE) {
+          helpMsg = '单击结束绘制';
+        } else {
+          helpMsg = '单击继续绘制，双击结束绘制';
+        }
       } else if (geom instanceof LineString) {
         helpMsg = '单击继续绘制，双击结束绘制';
       } else if (geom instanceof Circle) {

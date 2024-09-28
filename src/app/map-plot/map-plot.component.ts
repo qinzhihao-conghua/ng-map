@@ -202,7 +202,6 @@ export class MapPlotComponent implements OnInit {
   activeFeature(feature: Feature) {
     this.currentFeature = feature;
     this.hiddenPanel = true;
-    // this.mapInstance.activeFeature(feature);
   }
   setProperty() {
     if (!this.currentFeature) {
