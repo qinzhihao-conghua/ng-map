@@ -751,8 +751,9 @@ export class OlMapService {
   /**
    * 设置撒点集合的中心
    * @param geojson geojson数据
+   * @param zoom 缩放层级
    */
-  setFeaturesCenter(geojson: any) {
+  setFeaturesCenter(geojson: any, zoom: number) {
     let features = null;
     if (Array.isArray(geojson)) {
       features = turf.featureCollection(geojson);
@@ -762,7 +763,7 @@ export class OlMapService {
       features = turf.featureCollection([geojson]);
     }
     const center = turf.center(features).geometry.coordinates;
-    this.map.getView().setCenter(center);
+    this.setCenter(center, zoom);
   }
   /**
    * 根据geojson中Properties返回的样式对图形设置样式
@@ -841,7 +842,7 @@ export class OlMapService {
    * 撒点
    * @param geoPoints 点坐标
    */
-  showPoint(geoPoints: any, showdAnimate?: boolean) {
+  showPoint(geoPoints: any, showdAnimate?: boolean, zoom?: number) {
     // 监听导致绘制点的时候也执行添加动画
     let key = null;
     if (showdAnimate) {
@@ -851,7 +852,7 @@ export class OlMapService {
     }
     const geo = new GeoJSON().readFeatures(geoPoints);
     this.mapLayerSource.addFeatures(geo);
-    this.setFeaturesCenter(geoPoints);
+    this.setFeaturesCenter(geoPoints, zoom);
     this.clearInteraction();
     // 撒点完成之后解除事件绑定，防止在绘制其他图形时产生动画
     unByKey(key);
@@ -870,8 +871,9 @@ export class OlMapService {
   /**
    * geojson数据上图
    * @param geoPolygon geojson数据
+   * @param zoom 缩放层级
    */
-  geojsonDataOnMap(geoPolygon: GeoJsonCollectionType | GeoJsonItemType) {
+  geojsonDataOnMap(geoPolygon: GeoJsonCollectionType | GeoJsonItemType, zoom?: number) {
     // @ts-ignore
     let resultGeo: GeoJsonCollectionType = geoPolygon;
     if (geoPolygon.type === 'Feature') {
@@ -887,7 +889,7 @@ export class OlMapService {
       result = this.setStyleByProperties(resultGeo, polygons);
     }
     this.mapLayerSource.addFeatures(result);
-    this.setFeaturesCenter(resultGeo);
+    this.setFeaturesCenter(resultGeo, zoom);
     this.clearInteraction();
   }
   /**
@@ -930,10 +932,10 @@ export class OlMapService {
    * 撒正方形
    * @param geoSquare geojson正方形数据
    */
-  showSquare(geoSquare: object) {
+  showSquare(geoSquare: object, zoom?: number) {
     const square = new GeoJSON().readFeature(geoSquare);
     this.mapLayerSource.addFeature(square);
-    this.setFeaturesCenter(geoSquare);
+    this.setFeaturesCenter(geoSquare, zoom);
     this.clearInteraction();
   }
 

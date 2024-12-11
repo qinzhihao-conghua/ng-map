@@ -7,7 +7,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import { fromLonLat } from 'ol/proj';
 import { Style, Fill, Stroke } from 'ol/style';
 import { Polygon } from 'ol/geom';
-import * as shanghai from '../../assets/shanghai.json';
+import shanghai from '../../assets/shanghai.json';
 
 @Component({
   selector: 'app-area-map',
@@ -46,7 +46,7 @@ export class AreaMapComponent implements OnInit {
 
   private loadShanghaiDistricts() {
     const geojsonFormat = new GeoJSON();
-    const features = geojsonFormat.readFeatures((shanghai as any).default);
+    const features = geojsonFormat.readFeatures(shanghai);
     // @ts-ignore
     const vectorSource = this.map.getLayers().item(0).getSource() as VectorSource;
     vectorSource.addFeatures(features);
