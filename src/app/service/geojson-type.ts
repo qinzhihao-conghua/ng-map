@@ -5,7 +5,7 @@ export class GeoJsonCollectionType {
 export class GeoJsonItemType {
     type: string;
     properties: any;
-    id: string;
+    id?: string;
     geometry: {
         type: string,
         coordinates: Array<any>,
