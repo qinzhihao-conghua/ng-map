@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AreaMapNewComponent } from './area-map-new.component';
+import { SvgMapComponent } from './svg-map.component';
 
-describe('AreaMapNewComponent', () => {
-  let component: AreaMapNewComponent;
-  let fixture: ComponentFixture<AreaMapNewComponent>;
+describe('SvgMapComponent', () => {
+  let component: SvgMapComponent;
+  let fixture: ComponentFixture<SvgMapComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ AreaMapNewComponent ]
+      declarations: [ SvgMapComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(AreaMapNewComponent);
+    fixture = TestBed.createComponent(SvgMapComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

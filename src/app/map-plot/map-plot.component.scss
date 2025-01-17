@@ -1,0 +1,172 @@
+@mixin close($top, $right) {
+  display: block;
+  text-align: right;
+  cursor: pointer;
+  position: absolute;
+  right: $right;
+  top: $top;
+  background-color: red;
+  color: #fff;
+  padding: 2px 6px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.patrol-plan {
+  height: 100%;
+  min-height: 100px;
+  overflow: auto;
+  position: relative;
+
+  .panel {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+    right: 16px;
+    top: 12px;
+    border-radius: 4px;
+    width: 46px;
+    background-color: #fff;
+    box-shadow: 0 0 5px 2px #b3b3b3;
+  }
+
+  .map-tools {
+    @extend .panel;
+    padding: 6px;
+    flex-direction: row;
+    left: 48px;
+    width: max-content;
+
+    span[class^="icon-"] {
+      font-size: 26px;
+      padding: 10px;
+      display: inline-block;
+      cursor: pointer;
+    }
+  }
+
+  .active {
+    background-color: #2950b8;
+    color: #fff;
+  }
+
+  .setting-style {
+    @extend .panel;
+    right: 12px;
+    width: 350px;
+    max-height: calc(100vh - 210px);
+    overflow: auto;
+    display: unset;
+
+    .setting-title {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ccc;
+
+      .close-panel {
+        @include close(0px, 0px);
+        position: unset;
+      }
+    }
+
+    .properties-panel {
+      height: calc(100vh - 300px);
+      overflow: auto;
+      padding: 16px;
+
+      .setting-item {
+        padding: 6px 0;
+        display: flex;
+        width: 100%;
+
+        .color-container {
+          display: flex;
+          flex-wrap: wrap;
+
+          .color-block {
+            display: inline-block;
+            padding: 8px;
+            border: 4px solid transparent;
+          }
+        }
+
+        &>label {
+          margin: 0;
+          padding-right: 16px;
+          min-width: 64px;
+          text-align: right;
+        }
+
+        .sub-item {
+          display: flex;
+          align-items: center;
+
+          input[type='number'] {
+            width: 60px;
+          }
+
+          label {
+            width: 86px;
+            text-align-last: justify;
+            margin-right: 12px;
+          }
+        }
+
+      }
+
+      .column-item {
+        flex-direction: column;
+
+        &>label {
+          text-align: left;
+        }
+
+        .item-style {
+          margin-left: 80px;
+        }
+      }
+    }
+  }
+
+
+  .ol-popup {
+    background-color: #fff;
+    border-radius: 4px;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    min-width: 220px;
+    border: 1px solid #ccc;
+
+    .popup-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ccc;
+      padding: 12px;
+    }
+
+    #popup-content {
+      padding: 12px;
+    }
+
+    .ol-popup-closer {
+      cursor: pointer;
+      background-color: red;
+      color: #fff;
+      padding: 2px 6px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+  }
+
+  .map {
+    width: 100%;
+    height: 100%;
+    min-height: 100px;
+  }
+}

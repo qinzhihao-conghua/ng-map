@@ -8,18 +8,20 @@ import { HttpClient } from '@angular/common/http';
 import { GeoJSON } from 'ol/format';
 import Point from 'ol/geom/Point';
 import * as turf from '@turf/turf';
+import { BaseStyle, TextStyle } from '../service/base-type';
+import { Circle } from 'ol/geom';
+import { GeoJsonCollectionType } from '../service/geojson-type';
 
 @Component({
-  selector: 'area-map-new',
-  templateUrl: './area-map-new.component.html',
-  styleUrls: ['./area-map-new.component.scss'],
+  selector: 'map-plot',
+  templateUrl: './map-plot.component.html',
+  styleUrls: ['./map-plot.component.scss'],
   // providers: [OlMapService]
 })
-export class AreaMapNewComponent implements OnInit {
+export class MapPlotComponent implements OnInit {
 
   /**
    * 覃智浩 2022年10月11日 14:53:36
-   * 新巡区地图绘制组件，使用的service也是重写的OlMapService
    */
   constructor(
     private http: HttpClient,
@@ -43,20 +45,27 @@ export class AreaMapNewComponent implements OnInit {
   currentFeature: Feature = null;
   layerDesc: string = null;
   layerName: string = null;
-  strokeColors: Array<string> = ['#E80505', '#FCCF31', '#F8D800', '#49C628', '#32CCBC', '#0396FF', '#3813C2'];
-  fillColors: Array<string> = [
-    'rgba(255, 255, 255, .5)',
-    'rgba(232, 5, 5, .3)',
-    'rgba(252, 207, 49, .3)',
-    'rgba(248, 215, 0, .3)',
-    'rgba(74, 198, 40, .3)',
-    'rgba(50, 204, 189, .3',
-    'rgba(3, 150, 255, .3)',
-    'rgba(57, 19, 194, .3)'
-  ];
+  // strokeColors: Array<string> = ['#E80505', '#FCCF31', '#F8D800', '#49C628', '#32CCBC', '#0396FF', '#3813C2'];
+  // fillColors: Array<string> = [
+  //   'rgba(255, 255, 255, .5)',
+  //   'rgba(232, 5, 5, .3)',
+  //   'rgba(252, 207, 49, .3)',
+  //   'rgba(248, 215, 0, .3)',
+  //   'rgba(74, 198, 40, .3)',
+  //   'rgba(50, 204, 189, .3',
+  //   'rgba(3, 150, 255, .3)',
+  //   'rgba(57, 19, 194, .3)'
+  // ];
   currentStrokeColor: string = '#E80505';
-  currentFillColor: string = 'rgba(255, 255, 255, 0.5)';
-
+  currentFillColor: string = '#ffffff';
+  fillColorOpacity: number = 0.5;
+  strokeColorOpacity: number = 1;
+  strokeWidth: number = 2;
+  lineDash: string = '1';
+  textStyle: TextStyle = {
+    text: '',
+    font: '10px sans-serif',
+  };
 
   coordinate: number[] = [];
   geojson: {
@@ -72,15 +81,20 @@ export class AreaMapNewComponent implements OnInit {
   // map: Map;
   markText = '开始移动';
   heatMapLayer = null;
-  clusterMapLayer = null;
+  clusterMapLayer = [];
   markerAnimationLayer = null;
   markDisabled = true;
   fontType: Array<string> = ['宋体', '微软雅黑', '仿宋', '黑体', '方正', '华文隶书', '等线', '华文行楷', 'sans-serif'];
+  fontSize: number = 16;
+  fontColr: string = '#000000';
+  fontFamily: string = '黑体';
+  fontItalic: boolean = false;
+  fontWeight: boolean = false;
   lineDashType: Array<any> = [
     { key: '1', code: [], value: '—————' },
     { key: '2', code: [5, 5], value: '...................' },
     { key: '3', code: [10, 10], value: '----------' },
-    { key: '4', code: [20, 5], value: '— — —  ' }
+    { key: '4', code: [20, 15], value: '— — —  ' }
   ];
 
   ngOnInit() {
@@ -95,7 +109,7 @@ export class AreaMapNewComponent implements OnInit {
   ngOnChanges(changes: SimpleChanges) {
     if (changes.geojsonData && changes.geojsonData.currentValue) {
       console.log('回显数据', this.geojsonData);
-      this.mapInstance.showPolygon(this.geojsonData);
+      this.mapInstance.geojsonDataOnMap(this.geojsonData);
     }
     if (changes.showTools && !changes.showTools.currentValue) {
       this.closePanel();
@@ -121,12 +135,17 @@ export class AreaMapNewComponent implements OnInit {
       case 'LineString':
       case 'Polygon':
       case 'Circle':
+      case 'Square':
+      case 'Box':
         const imgSrc = type === 'Point' ? 'assets/location.jpg' : '';
-        this.mapInstance.addInteractions(type, null, imgSrc, false, false).subscribe((data: Feature) => {
-          this.activeFeature(data);
-          setTimeout(() => {
-            this.setProperty();
-          }, 300);
+        this.mapInstance.addInteractions(type, false, true, imgSrc).subscribe((data: Feature | GeoJsonCollectionType) => {
+          console.log('绘制结果', data);
+          // console.log('绘制结果', JSON.parse(data));
+          // this.activeFeature(data);
+          // this.layerName = data.getProperties()['measure']
+          // setTimeout(() => {
+          //   this.setProperty();
+          // }, 300);
           // 单独返回这个巡区
           // const geojson = this.mapInstance.featuresToGeojson([data]);
           // this.drawBackFeature.emit(geojson);
@@ -165,9 +184,10 @@ export class AreaMapNewComponent implements OnInit {
     this.layerDesc = null;
     this.layerName = null;
     this.currentStrokeColor = '#E80505';
-    this.currentFillColor = 'rgba(255, 255, 255, 0.5)';
+    this.currentFillColor = '#ffffff';
   }
   chooseColor(color: string, type: string) {
+    console.log('选择的颜色', color);
     if (type === 'stroke') {
       this.currentStrokeColor = color;
     } else {
@@ -182,23 +202,32 @@ export class AreaMapNewComponent implements OnInit {
   activeFeature(feature: Feature) {
     this.currentFeature = feature;
     this.hiddenPanel = true;
-    // if (this.currentFeature) {
-    //   (this.currentFeature.getStyle() as Style).getStroke().setColor('#2196f3');
-    //   this.currentFeature.changed();
-    // }
   }
   setProperty() {
-    const style = {
-      strokeColor: this.currentStrokeColor,
-      fillColor: this.currentFillColor,
-      text: this.layerName,
-      pointImageUrl: 'assets/img/location.png'
+    if (!this.currentFeature) {
+      console.log('没有选择图形要素');
+      return;
+    }
+    const style: BaseStyle = {
+      stroke: {
+        color: this.mapInstance.hexToRgba(this.currentStrokeColor, this.strokeColorOpacity),
+        width: this.strokeWidth,
+        lineDash: this.lineDashType.filter(item => item.key === this.lineDash)[0].code
+      },
+      fill: this.mapInstance.hexToRgba(this.currentFillColor, this.fillColorOpacity),
+      text: {
+        text: this.layerName,
+        color: this.fontColr,
+        font: `${this.fontWeight === true ? 'bold' : 'normal'} ${this.fontItalic === true ? 'italic' : 'normal'} normal ${this.fontSize}px ${this.fontFamily}`
+      },
+      image: { type: '', src: 'assets/location.jpg' }
     }
     const properties = {
       name: this.layerName,
       desc: this.layerDesc,
       style
     }
+    // console.log('设置样式', style);
     this.mapInstance.setFeatureStyle(this.currentFeature, style, properties);
     this.currentFeature.changed();
 
@@ -206,40 +235,7 @@ export class AreaMapNewComponent implements OnInit {
     let geojsonBack = this.mapInstance.featuresToGeojson(features);
     this.drawBackAllFeatures.emit(geojsonBack);
   }
-  addPopup(data) {
-    let center = null;
-    let json = null;
-    if (data.type === 'Circle') {
-      center = data.center;
-    } else {
-      json = JSON.parse(data);
-    }
-    console.log('绘制结果', json);
-    const dom = document.getElementById('popup');
-    dom.style.display = 'block';
-    const content = document.getElementById('popup-content');
-    content.innerHTML = `
-        <p>测试popup</p>
-        <p>测试popup</p>
-      `;
-    this.currentPopuId = this.mapInstance.newGuid();
-    let temp = [];
-    if (json && json.geometry.type === 'LineString') {
-      json.geometry.coordinates.forEach(item => {
-        temp.push(turf.point(item))
-      })
-    } else if (json && json.geometry.type === 'Polygon') {
-      json.geometry.coordinates[0].forEach(item => {
-        temp.push(turf.point(item))
-      })
-    } else if (json) {
-      temp.push(turf.point(json.geometry.coordinates))
-    }
-    const features = turf.featureCollection(temp);
 
-    center = center ? center : turf.center(features).geometry.coordinates;
-    this.mapInstance.showPopup(dom, center, this.currentPopuId)
-  }
   exportPng() {
     // postcompose rendercomplete
     this.map.once('rendercomplete', () => {
@@ -306,18 +302,28 @@ export class AreaMapNewComponent implements OnInit {
       console.log('点击返回', data);
       // if (features.length > 0) {
       console.log('features属性', data.getProperties());
-      console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      // console.log('转成geojson', new GeoJSON().writeFeature(data as Feature));
+      this.activeFeature(data);
+      const measureData = this.mapInstance.getMeasureData(data);
+      const properties = data.getProperties();
+      const featureId = data.getId();
+      console.log('测量数据', measureData);
       const dom = document.getElementById('popup');
       dom.style.display = 'block';
       const content = document.getElementById('popup-content');
       content.innerHTML = `
-            <p>测试popup</p>
-            <p>测试popup</p>
-            <p>测试popup</p>
-            <p>测试popup</p>
+            <p><label style="width:90px;display: inline-block;">面积/长度：</label> ${measureData.measureData}</p>
+            <p><label style="width:90px;display: inline-block;">图层名称：</label> ${properties.name}</p>
+            <p><label style="width:90px;display: inline-block;">图层描述：</label> ${properties.desc}</p>
+            <p><label style="width:90px;display: inline-block;">要素id：</label> ${featureId}</p>
           `;
       // @ts-ignore
-      const center = turf.center(JSON.parse(new GeoJSON().writeFeature(data))).geometry.coordinates;
+      let center = [];
+      if (data.getGeometry().getType() === 'Circle') {
+        center = (data.getGeometry() as Circle).getCenter()
+      } else {
+        center = turf.center(JSON.parse(new GeoJSON().writeFeature(data))).geometry.coordinates;
+      }
       this.mapInstance.showPopup(dom, center, 'test');
       // }
     });
@@ -326,11 +332,11 @@ export class AreaMapNewComponent implements OnInit {
     this.mapInstance.closeClickEvent();
     this.mapInstance.closeOverlay('test');
   }
-  addInteractions(type: string) {
-    this.mapInstance.addInteractions(type).subscribe((data: string) => {
-      console.log('绘制结果', JSON.parse(data));
-    });
-  }
+  // addInteractions(type: string) {
+  //   this.mapInstance.addInteractions(type).subscribe((data: string) => {
+  //     console.log('绘制结果', JSON.parse(data));
+  //   });
+  // }
   deleteLayer() {
     this.mapInstance.deleteLayer().subscribe(data => {
       console.log('删除结果', data);
@@ -342,22 +348,40 @@ export class AreaMapNewComponent implements OnInit {
     this.closeMarkerAnimation();
     this.mapInstance.clearLayer();
   }
-  addPoint() {
-    this.mapInstance.showPoint(this.geojson.Points);
+  // addPoint() {
+  //   this.mapInstance.showPoint(this.geojson.Points);
+  // }
+  dataOnMap(type: string) {
+    let geojson;
+    if (type === 'Point') {
+      geojson = this.geojson.Points;
+    } else if (type === 'LineString') {
+      geojson = this.geojson.line;
+    } else if (type === 'Polygon') {
+      geojson = this.geojson.Polygon;
+    } else if (type === 'Circle') {
+      geojson = this.geojson.Circle;
+    } else if (type === 'Square') {
+      geojson = this.geojson.Square;
+    } else if (type === 'Box') {
+      geojson = this.geojson.Box;
+    }
+    this.mapInstance.geojsonDataOnMap(geojson as GeoJsonCollectionType);
+
   }
-  showPolyline() {
-    this.mapInstance.showPolyline(this.geojson.line);
-  }
-  showPolygon() {
-    this.mapInstance.showPolygon(this.geojson.Polygon);
-  }
-  showCircle() {
-    // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
-    this.mapInstance.showPolygon(this.geojson.Circle);
-  }
-  showSquare() {
-    this.mapInstance.showSquare(this.geojson.Square);
-  }
+  // showPolyline() {
+  //   this.mapInstance.showPolyline(this.geojson.line);
+  // }
+  // showPolygon() {
+  //   this.mapInstance.geojsonDataOnMap(this.geojson.Polygon as GeoJsonCollectionType);
+  // }
+  // showCircle() {
+  //   // this.mapInstance.showCircle({ center: [108.41378967683895, 22.793760087092004], radius: 2500 }, 'EPSG:4326');
+  //   this.mapInstance.geojsonDataOnMap(this.geojson.Circle as GeoJsonCollectionType);
+  // }
+  // showSquare() {
+  //   this.mapInstance.showSquare(this.geojson.Square);
+  // }
   clearInteraction() {
     this.mapInstance.clearInteraction();
   }
@@ -380,7 +404,7 @@ export class AreaMapNewComponent implements OnInit {
       features[i] = new Feature(new Point(coordinates));
     }
     const result = this.mapInstance.showClusterMap(features);
-    this.clusterMapLayer = result.layer;
+    this.clusterMapLayer.push(result.layer);
   }
   closeClusterMap() {
     this.mapInstance.closeClusterMap(this.clusterMapLayer)
@@ -418,6 +442,6 @@ export class AreaMapNewComponent implements OnInit {
     let url = '/geoserver/egis3/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=egis3%3Ads_view_violation_today&outputFormat=application%2Fjson'
     const result = await this.http.post(url, null).toPromise();
     console.log('---------', result);
-    this.mapInstance.showPolygon(result);
+    this.mapInstance.geojsonDataOnMap(result as GeoJsonCollectionType);
   }
 }
