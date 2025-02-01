@@ -8,6 +8,7 @@ import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
 import { XzqhComponent } from './xzqh/xzqh.component';
 import { AreaMapComponent } from './area-map/area-map.component';
 import { SvgMapComponent } from './svg-map/svg-map.component';
+import { PlotUtilComponent } from './plot-util/plot-util.component';
 
 const routes: Routes = [
   { path: 'bd-map', component: OlBdMapComponent },
@@ -18,6 +19,7 @@ const routes: Routes = [
   { path: 'xzqh', component: XzqhComponent },
   { path: 'area-map', component: AreaMapComponent },
   { path: 'svg-map', component: SvgMapComponent },
+  { path: 'plot-util', component: PlotUtilComponent },
   { path: '', redirectTo: 'new', pathMatch: 'full' }
 ];
 

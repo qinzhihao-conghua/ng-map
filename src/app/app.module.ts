@@ -13,6 +13,7 @@ import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
 import { XzqhComponent } from './xzqh/xzqh.component';
 import { AreaMapComponent } from './area-map/area-map.component';
 import { SvgMapComponent } from './svg-map/svg-map.component';
+import { PlotUtilComponent } from './plot-util/plot-util.component';
 
 @NgModule({
   declarations: [
@@ -24,7 +25,8 @@ import { SvgMapComponent } from './svg-map/svg-map.component';
     ImageMapComponent,
     XzqhComponent,
     AreaMapComponent,
-    SvgMapComponent
+    SvgMapComponent,
+    PlotUtilComponent
   ],
   imports: [
     BrowserModule,
