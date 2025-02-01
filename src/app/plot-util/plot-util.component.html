@@ -1,0 +1,38 @@
+<div class="patrol-plan">
+    <div class="map" id="map-container"></div>
+    <div>
+        <button (click)="drawGemo('TextArea')">测试文本标绘</button>
+        <button (click)="drawGemo('Point')">测试画点</button>
+        <button (click)="drawGemo('Polyline')">测试画线</button>
+        <button (click)="drawGemo('Curve')">测试画曲线</button>
+        <button (click)="drawGemo('Arc')">测试画弓形</button>
+        <button (click)="drawGemo('Circle')">测试画圆</button>
+
+        <button (click)="drawGemo('FreeHandLine')">测试画自由线</button>
+        <button (click)="drawGemo('RectAngle')">测试画矩形</button>
+        <button (click)="drawGemo('Ellipse')">测试椭圆</button>
+        <button (click)="drawGemo('Lune')">测试弓形</button>
+        <button (click)="drawGemo('Sector')">测试画扇形</button>
+        <button (click)="drawGemo('ClosedCurve')">测试画闭合曲面</button>
+        <button (click)="drawGemo('Polygon')">测试多边形</button>
+        <button (click)="drawGemo('FreePolygon')">测试自由面</button>
+        <button (click)="drawGemo('GatheringPlace')">测试集结地</button>
+
+        <button (click)="drawGemo('DoubleArrow')">测试双箭头</button>
+        <button (click)="drawGemo('StraightArrow')">测试细直箭头</button>
+        <button (click)="drawGemo('FineArrow')">测试粗单尖头箭头</button>
+        <button (click)="drawGemo('AttackArrow')">测试进攻方向</button>
+        <button (click)="drawGemo('AssaultDirection')">测试粗单直箭头</button>
+        <button (click)="drawGemo('TailedAttackArrow')">测试进攻方向（尾）</button>
+        <button (click)="drawGemo('SquadCombat')">测试分队战斗行动</button>
+        <button (click)="drawGemo('TailedSquadCombat')">测试分队战斗行动（尾）</button>
+
+        <button (click)="drawGemo('RectFlag')">测试矩形标志旗</button>
+        <button (click)="drawGemo('TriangleFlag')">测试三角标志旗</button>
+        <button (click)="drawGemo('CurveFlag')">测试曲线标志旗</button>
+
+        <button (click)="getFeatures()">获取标绘图层上的所有要素</button>
+        <button (click)="editLayer()">编辑</button>
+        <button (click)="cancelEdit()">取消编辑</button>
+    </div>
+</div>
