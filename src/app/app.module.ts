@@ -5,15 +5,15 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { MapPlotComponent } from './map-plot/map-plot.component';
-import { ImageMapComponent } from './image-map/image-map.component';
-import { MapabcComponent } from './mapabc/mapabc.component';
-import { MinemapComponent } from './minemap/minemap.component';
-import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
-import { XzqhComponent } from './xzqh/xzqh.component';
-import { AreaMapComponent } from './area-map/area-map.component';
-import { SvgMapComponent } from './svg-map/svg-map.component';
-import { PlotUtilComponent } from './plot-util/plot-util.component';
+import { MapPlotComponent } from './components/map-plot/map-plot.component';
+import { ImageMapComponent } from './components/image-map/image-map.component';
+import { MapabcComponent } from './components/mapabc/mapabc.component';
+import { MinemapComponent } from './components/minemap/minemap.component';
+import { OlBdMapComponent } from './components/ol-bd-map/ol-bd-map.component';
+import { XzqhComponent } from './components/xzqh/xzqh.component';
+import { AreaMapComponent } from './components/area-map/area-map.component';
+import { SvgMapComponent } from './components/svg-map/svg-map.component';
+import { PlotUtilComponent } from './components/plot-util/plot-util.component';
 
 @NgModule({
   declarations: [

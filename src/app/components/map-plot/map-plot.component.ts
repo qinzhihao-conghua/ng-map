@@ -3,14 +3,14 @@ import { Map } from 'ol';
 import Feature from 'ol/Feature';
 import { ViewOptions } from 'ol/View';
 import { Style, Icon } from 'ol/style';
-import { OlMapService } from '../service/ol-map-service';
+import { OlMapService } from '../../service/ol-map-service';
 import { HttpClient } from '@angular/common/http';
 import { GeoJSON } from 'ol/format';
 import Point from 'ol/geom/Point';
 import * as turf from '@turf/turf';
-import { BaseStyle, TextStyle } from '../service/base-type';
+import { BaseStyle, TextStyle } from '../../service/base-type';
 import { Circle } from 'ol/geom';
-import { GeoJsonCollectionType } from '../service/geojson-type';
+import { GeoJsonCollectionType } from '../../service/geojson-type';
 
 @Component({
   selector: 'map-plot',
