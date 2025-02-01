@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { ViewOptions } from 'ol/View';
-import { OlMapService } from '../service/ol-map-service';
+import { OlMapService } from '../../service/ol-map-service';
 import { Feature, Map } from 'ol';
 import Select from 'ol/interaction/Select';
 import Modify from 'ol/interaction/Modify';
-import OlPlot from '../plot-utils';
+import OlPlot from '../../plot-utils';
 
 @Component({
   selector: 'app-plot-util',

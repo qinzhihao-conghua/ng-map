@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import View, { ViewOptions } from 'ol/View';
-import { OlMapService } from '../service/ol-map-service';
+import { OlMapService } from '../../service/ol-map-service';
 import { Map } from 'ol';
-import gx from '../../assets/gx.json';
-import gxbj from '../../assets/gxbj.json';
-import sc from '../../assets/sc.json';
+import gx from '../../../assets/gx.json';
+import gxbj from '../../../assets/gxbj.json';
+import sc from '../../../assets/sc.json';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import TileLayer from 'ol/layer/Tile';

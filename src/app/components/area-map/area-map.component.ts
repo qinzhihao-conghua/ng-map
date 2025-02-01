@@ -7,7 +7,7 @@ import GeoJSON from 'ol/format/GeoJSON';
 import { fromLonLat } from 'ol/proj';
 import { Style, Fill, Stroke } from 'ol/style';
 import { Polygon } from 'ol/geom';
-import shanghai from '../../assets/shanghai.json';
+import shanghai from '../../../assets/shanghai.json';
 
 @Component({
   selector: 'app-area-map',
