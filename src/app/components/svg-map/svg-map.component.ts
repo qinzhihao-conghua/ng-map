@@ -19,26 +19,13 @@ export class SvgMapComponent implements OnInit {
   private map!: Map;
 
   async ngOnInit() {
-    // 1. 动态创建自定义投影
-    proj4.defs('SVG_PROJ', '+proj=tmerc +lat_0=31.23 +lon_0=121.47 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs');
-    register(proj4);
-
     // 2. 加载SVG并提取控制点
     const svgContent = await fetch('/assets/上海市底图.svg').then(r => r.text());
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
-
-    const controlPoints = Array.from(svgDoc.querySelectorAll('circle[data-lonlat]'))
-      .map(el => ({
-        x: parseFloat(el.getAttribute('cx')!),
-        y: parseFloat(el.getAttribute('cy')!),
-        lonlat: el.getAttribute('data-lonlat')!.split(',').map(Number)
-      }));
 
     // 3. 计算图片的地理范围
     const extent = transformExtent(
       [120.51, 30.40, 122.12, 31.53], // 上海地理范围
-      'EPSG:4326', 'SVG_PROJ'
+      'EPSG:4326', 'EPSG:4326'
     );
 
     console.log('SVG 图片地理范围:', extent);
@@ -52,8 +39,8 @@ export class SvgMapComponent implements OnInit {
     this.map = new Map({
       target: 'map-container',
       view: new View({
-        projection: 'SVG_PROJ',
-        center: [(extent[0] + extent[2]) / 2, (extent[1] + extent[3]) / 2], // 使用图片范围的中心点
+        projection: 'EPSG:4326', // 使用 EPSG:3857 投影
+        center: [121.47, 31.23], // 上海中心点
         zoom: 9 // 调整缩放级别
       })
     });
@@ -64,8 +51,8 @@ export class SvgMapComponent implements OnInit {
     const imageLayer = new ImageLayer({
       source: new Static({
         url: svgImage.src,
-        imageExtent: extent, // 确保范围正确
-        projection: 'SVG_PROJ'
+        imageExtent: [120.849, 30.68, 122.25, 31.87], // 使用 EPSG:3857 范围
+        projection: 'EPSG:4326' // 使用 EPSG:3857 投影
       })
     });
 
