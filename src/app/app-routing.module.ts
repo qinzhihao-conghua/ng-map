@@ -1,13 +1,14 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { MapPlotComponent } from './map-plot/map-plot.component';
-import { ImageMapComponent } from './image-map/image-map.component';
-import { MapabcComponent } from './mapabc/mapabc.component';
-import { MinemapComponent } from './minemap/minemap.component';
-import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
-import { XzqhComponent } from './xzqh/xzqh.component';
-import { AreaMapComponent } from './area-map/area-map.component';
-import { SvgMapComponent } from './svg-map/svg-map.component';
+import { MapPlotComponent } from './components/map-plot/map-plot.component';
+import { ImageMapComponent } from './components/image-map/image-map.component';
+import { MapabcComponent } from './components/mapabc/mapabc.component';
+import { MinemapComponent } from './components/minemap/minemap.component';
+import { OlBdMapComponent } from './components/ol-bd-map/ol-bd-map.component';
+import { XzqhComponent } from './components/xzqh/xzqh.component';
+import { AreaMapComponent } from './components/area-map/area-map.component';
+import { SvgMapComponent } from './components/svg-map/svg-map.component';
+import { PlotUtilComponent } from './components/plot-util/plot-util.component';
 import { XzqhOfflineComponent } from './xzqh-offline/xzqh-offline.component';
 
 const routes: Routes = [
@@ -20,6 +21,7 @@ const routes: Routes = [
   { path: 'xzqh-offline', component: XzqhOfflineComponent },
   { path: 'area-map', component: AreaMapComponent },
   { path: 'svg-map', component: SvgMapComponent },
+  { path: 'plot-util', component: PlotUtilComponent },
   { path: '', redirectTo: 'new', pathMatch: 'full' }
 ];
 
