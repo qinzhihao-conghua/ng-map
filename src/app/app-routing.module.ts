@@ -8,6 +8,7 @@ import { OlBdMapComponent } from './ol-bd-map/ol-bd-map.component';
 import { XzqhComponent } from './xzqh/xzqh.component';
 import { AreaMapComponent } from './area-map/area-map.component';
 import { SvgMapComponent } from './svg-map/svg-map.component';
+import { XzqhOfflineComponent } from './xzqh-offline/xzqh-offline.component';
 
 const routes: Routes = [
   { path: 'bd-map', component: OlBdMapComponent },
@@ -16,6 +17,7 @@ const routes: Routes = [
   { path: 'minemap', component: MinemapComponent },
   { path: 'image', component: ImageMapComponent },
   { path: 'xzqh', component: XzqhComponent },
+  { path: 'xzqh-offline', component: XzqhOfflineComponent },
   { path: 'area-map', component: AreaMapComponent },
   { path: 'svg-map', component: SvgMapComponent },
   { path: '', redirectTo: 'new', pathMatch: 'full' }
