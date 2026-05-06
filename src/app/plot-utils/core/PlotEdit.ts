@@ -156,7 +156,7 @@ class PlotEdit {
    * 对控制点的移动事件
    * @param event
    */
-  controlPointMouseMoveHandler(event: MapBrowserEvent) {
+  controlPointMouseMoveHandler(event: MapBrowserEvent<any>) {
     let coordinate = event.coordinate
     if (this.activeControlPointId) {
       let plot = this.activePlot.getGeometry()
@@ -173,7 +173,7 @@ class PlotEdit {
    * 对控制点的鼠标抬起事件
    * @param event
    */
-  controlPointMouseUpHandler(event: MapBrowserEvent) {
+  controlPointMouseUpHandler(event: MapBrowserEvent<any>) {
     this.map.un('pointermove', this.controlPointMouseMoveHandler)
     htmlUtils.off(this.mapViewport, 'mouseup', this.controlPointMouseUpHandler)
   }
@@ -243,7 +243,7 @@ class PlotEdit {
    * 在要编辑的要素按下鼠标按键
    * @param event
    */
-  plotMouseDownHandler(event: MapBrowserEvent) {
+  plotMouseDownHandler(event: MapBrowserEvent<any>) {
     this.ghostControlPoints = this.getControlPoints()
     this.startPoint = event.coordinate
     this.disableMapDragPan()
@@ -255,7 +255,7 @@ class PlotEdit {
    * 在要编辑的要素上移动鼠标
    * @param event
    */
-  plotMouseMoveHandler(event: MapBrowserEvent) {
+  plotMouseMoveHandler(event: MapBrowserEvent<any>) {
     let [deltaX, deltaY, newPoints] = [event.coordinate[0] - this.startPoint[0], event.coordinate[1] - this.startPoint[1], []]
     if (this.ghostControlPoints && Array.isArray(this.ghostControlPoints) && this.ghostControlPoints.length > 0) {
       for (let i = 0; i < this.ghostControlPoints.length; i++) {
@@ -277,7 +277,7 @@ class PlotEdit {
    * 鼠标抬起事件
    * @param event
    */
-  plotMouseUpHandler(event: MapBrowserEvent) {
+  plotMouseUpHandler(event: MapBrowserEvent<any>) {
     this.enableMapDragPan()
     // this.map.un('pointerup', this.plotMouseUpHandler)
     this.map.un('pointerdrag', this.plotMouseMoveHandler)

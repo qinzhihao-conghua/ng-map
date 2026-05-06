@@ -13,6 +13,7 @@ import {
 import { Vector as $VectorSource } from 'ol/source'
 import { Map } from 'ol';
 import BaseLayer from 'ol/layer/Base';
+import VectorLayer from 'ol/layer/Vector';
 /**
  * 通过layerName获取图层
  * @param map 地图实例
@@ -21,7 +22,7 @@ import BaseLayer from 'ol/layer/Base';
  */
 const getLayerByLayerName = function (map: Map, layerName: string) {
   try {
-    let targetLayer: $VectorLayer = null
+    let targetLayer: VectorLayer<any> = null
     if (map) {
       let layers = map.getLayers().getArray()
       targetLayer = getLayerInternal(layers, 'layerName', layerName)
@@ -39,7 +40,7 @@ const getLayerByLayerName = function (map: Map, layerName: string) {
  * @param value
  */
 const getLayerInternal = function (layers: Array<BaseLayer>, key: string, value: string) {
-  let _target: $VectorLayer = null
+  let _target: VectorLayer<any> = null
   if (layers.length > 0) {
     layers.every(layer => {
       if (layer instanceof $Group) {
@@ -51,7 +52,7 @@ const getLayerInternal = function (layers: Array<BaseLayer>, key: string, value:
           return true
         }
       } else if (layer.get(key) === value) {
-        _target = layer as $VectorLayer
+        _target = layer as VectorLayer<any>
         return false
       } else {
         return true
@@ -70,7 +71,7 @@ const getLayerInternal = function (layers: Array<BaseLayer>, key: string, value:
 const createVectorLayer = function (map: Map, layerName: string, params: { create?: boolean, selectable?: boolean }) {
   try {
     if (map) {
-      let vectorLayer: $VectorLayer = getLayerByLayerName(map, layerName)
+      let vectorLayer: VectorLayer<any> = getLayerByLayerName(map, layerName)
       if (!(vectorLayer instanceof $VectorLayer)) {
         vectorLayer = null
       }

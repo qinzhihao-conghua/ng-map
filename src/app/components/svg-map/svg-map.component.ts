@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import 'ol/ol.css';
+// import 'ol/ol.css';
 import { Map, View } from 'ol';
 import { get as getProjection, transformExtent } from 'ol/proj';
 import { register } from 'ol/proj/proj4';
-import proj4 from 'proj4';
+// import proj4 from 'proj4';
 import ImageLayer from 'ol/layer/Image';
 import Static from 'ol/source/ImageStatic';
 import XYZ from 'ol/source/XYZ';

@@ -190,8 +190,8 @@ export class MapService {
    * 点击地图获取坐标
    * @returns 坐标，数组类型
    */
-  clickEvent(): Observable<MapBrowserEvent> {
-    const subject = new Subject<MapBrowserEvent>();
+  clickEvent(): Observable<MapBrowserEvent<any>> {
+    const subject = new Subject<MapBrowserEvent<any>>();
     const key = this.map.on('singleclick', (event) => {
       subject.next(event);
     });
@@ -433,7 +433,7 @@ export class MapService {
    */
   showCircle(circleCenter: Array<any>, r: number, dataEPSG: string) {
     let centerPoint = circleCenter;
-    let geometry: CircleGemo = new CircleGemo(centerPoint, r);
+    let geometry: CircleGemo | Geometry = new CircleGemo(centerPoint, r);
     if (dataEPSG === 'EPSG:4326') {
       centerPoint = transform(circleCenter, 'EPSG:4326', 'EPSG:3857');
       // 使用这个方法绘制圆必须将坐标转成3857的，因为第二个参数半径单位是米

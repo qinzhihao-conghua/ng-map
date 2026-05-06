@@ -25,6 +25,7 @@ import * as PlotTypes from '../Utils/PlotTypes'
 import { GeoJSON } from 'ol/format';
 import VectorLayer from 'ol/layer/Vector'
 import MapBrowserEvent from 'ol/MapBrowserEvent';
+import VectorSource from 'ol/source/Vector';
 import { Coordinate } from 'ol/coordinate'
 class PlotDraw {
   constructor(map: Map) {
@@ -56,7 +57,7 @@ class PlotDraw {
   map: Map;
   options = {};
   /** 当前矢量图层 */
-  drawLayer: VectorLayer;
+  drawLayer: VectorLayer<VectorSource>;
   layerName: string;
   /** 交互点 */
   points: Array<Coordinate> = null;
@@ -252,7 +253,7 @@ class PlotDraw {
    * 激活工具后第一次点击事件
    * @param event
    */
-  mapFirstClickHandler(event: MapBrowserEvent) {
+  mapFirstClickHandler(event: MapBrowserEvent<any>) {
     // 解绑
     this.map.un('click', this.mapFirstClickHandler)
     this.points.push(event.coordinate)
@@ -282,7 +283,7 @@ class PlotDraw {
    * 地图点击事件处理
    * @param event
    */
-  mapNextClickHandler(event: MapBrowserEvent) {
+  mapNextClickHandler(event: MapBrowserEvent<any>) {
     if (!this.plot.freehand) {
       if (MathDistance(event.coordinate, this.points[this.points.length - 1]) < 0.0001) {
         return false
@@ -303,7 +304,7 @@ class PlotDraw {
    * 地图双击事件处理
    * @param event
    */
-  mapDoubleClickHandler(event: MapBrowserEvent) {
+  mapDoubleClickHandler(event: MapBrowserEvent<any>) {
     event.preventDefault()
     this.plot.finishDrawing()
     this.drawEnd(event)
@@ -314,7 +315,7 @@ class PlotDraw {
    * 鼠标移动事件
    * @param event
    */
-  mapMouseMoveHandler(event: MapBrowserEvent) {
+  mapMouseMoveHandler(event: MapBrowserEvent<any>) {
     let coordinate = event.coordinate
     if (MathDistance(coordinate, this.points[this.points.length - 1]) < 0.0001) {
       return false
@@ -341,7 +342,7 @@ class PlotDraw {
   /**
    * 绘制结束
    */
-  drawEnd(event: MapBrowserEvent) {
+  drawEnd(event: MapBrowserEvent<any>) {
     // DOTO:需要将数据传出去
     if (this.feature && this.options['isClear']) {
       this.drawLayer.getSource().removeFeature(this.feature)

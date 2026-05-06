@@ -36,6 +36,24 @@
             "scripts": [
               "src/assets/map-js/mapabc/mapabc.js",
               "src/assets/map-js/minemap/2.1.0/minemap2.1.0.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "geojson-equality",
+              "turf-jsts",
+              "density-clustering",
+              "skmeans",
+              "rbush",
+              "polygon-clipping",
+              "object-assign",
+              "geojson-rbush",
+              "deep-equal",
+              "earcut",
+              "point-in-polygon",
+              "xml-utils",
+              "lru-cache",
+              "pbf",
+              "projzh",
+              "autosize"
             ]
           },
           "configurations": {
@@ -49,7 +67,6 @@
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
-              "extractCss": true,
               "namedChunks": false,
               "extractLicenses": true,
               "vendorChunk": false,
@@ -108,8 +125,7 @@
           "options": {
             "tsConfig": [
               "tsconfig.app.json",
-              "tsconfig.spec.json",
-              "e2e/tsconfig.json"
+              "tsconfig.spec.json"
             ],
             "exclude": [
               "**/node_modules/**"
