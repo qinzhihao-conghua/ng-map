@@ -2,124 +2,136 @@
  * Created by FDD on 2017/5/22.
  * @desc 标绘曲线算法
  */
-import { Map } from 'ol'
-import { LineString } from 'ol/geom'
-import { CURVE } from '../../Utils/PlotTypes'
-import * as PlotUtils from '../../Utils/utils'
+import { Map } from 'ol';
+import { LineString } from 'ol/geom';
+import { CURVE } from '../../Utils/PlotTypes';
+import * as PlotUtils from '../../Utils/utils';
+import { Coordinate } from 'ol/coordinate';
+
 class Curve extends LineString {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = CURVE
-    this.t = 0.3
-    this.set('params', params)
-    if (points && points.length > 0) {
-      this.setPoints(points)
-    } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
-    }
-  }
   type: string;
   t: number;
-  points = [];
-  map: Map;
-  /**
-   * 获取标绘类型
-   */
-  getPlotType() {
-    return this.type
+  points: Coordinate[];
+  map: Map | undefined;
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = CURVE;
+    this.t = 0.3;
+    this.options = params || {};
+    this.points = [];
+    this.set('params', this.options);
+    if (points && points.length > 0) {
+      this.setPoints(points);
+    } else if (coordinates && coordinates.length > 0) {
+      this.setCoordinates(coordinates as any);
+    }
   }
 
   /**
-   * 执行动作
+   * 获取标绘类型
+   * @returns 标绘类型
    */
-  generate() {
-    let count = this.getPointCount()
+  getPlotType(): string {
+    return this.type;
+  }
+
+  /**
+   * 生成曲线图形
+   */
+  generate(): void {
+    const count = this.getPointCount();
     if (count < 2) {
-      return false
+      return;
     } else if (count === 2) {
-      this.setCoordinates(this.points)
+      this.setCoordinates(this.points);
     } else {
-      let points = PlotUtils.getCurvePoints(this.t, this.points)
-      this.setCoordinates(points)
+      const points = PlotUtils.getCurvePoints(this.t, this.points);
+      this.setCoordinates(points);
     }
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default Curve
+export default Curve;

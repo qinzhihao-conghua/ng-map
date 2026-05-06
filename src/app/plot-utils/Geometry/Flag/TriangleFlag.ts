@@ -1,142 +1,149 @@
 /**
  * Created by FDD on 2017/9/13.
- * @desc 三角旗标（使用两个控制点直接创建三角旗标）
+ * @desc 三角旗标（使用两个控制点，直接创建三角旗标）
  */
-import { Map } from 'ol'
-import { Polygon } from 'ol/geom'
+import { Map } from 'ol';
+import { Polygon } from 'ol/geom';
+import { TRIANGLEFLAG } from '../../Utils/PlotTypes';
+import { Coordinate } from 'ol/coordinate';
 
-import { TRIANGLEFLAG } from '../../Utils/PlotTypes'
 class TriangleFlag extends Polygon {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = TRIANGLEFLAG
-    this.fixPointCount = 2
-    this.set('params', params)
+  type: string;
+  points: Coordinate[];
+  map: Map | undefined;
+  fixPointCount: number;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = TRIANGLEFLAG;
+    this.fixPointCount = 2;
+    this.points = [];
+    this.set('params', params);
     if (points && points.length > 0) {
-      this.setPoints(points)
+      this.setPoints(points);
     } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
+      this.setCoordinates(coordinates as any);
     }
   }
-  type: string;
-  points: Array<any> = [];
-  map: Map;
-  fixPointCount: number;
+
   /**
    * 获取标绘类型
+   * @returns 标绘类型
    */
-  getPlotType() {
-    return this.type
+  getPlotType(): string {
+    return this.type;
   }
 
   /**
-   * 执行动作
+   * 生成三角旗标图形
    */
-  generate() {
-    let count = this.getPointCount()
+  generate(): void {
+    const count = this.getPointCount();
     if (count < 2) {
-      return false
+      return;
     } else {
-      this.setCoordinates([this.calculatePonits(this.points)])
+      this.setCoordinates([this.calculatePoints(this.points)]);
     }
   }
 
   /**
-   * 插值点数据
-   * @param points
+   * 计算三角旗标的点集
+   * @param points 控制点数组
+   * @returns 点坐标数组
    */
-  calculatePonits(points) {
-    let components = []
-    // 至少需要两个控制点
+  calculatePoints(points: Coordinate[]): Coordinate[] {
+    let components: Coordinate[] = [];
     if (points.length > 1) {
-      // 取第一个
-      let startPoint = points[0]
-      // 取最后一个
-      let endPoint = points[points.length - 1]
-      var point1 = [endPoint[0], (startPoint[1] + endPoint[1]) / 2]
-      var point2 = [startPoint[0], (startPoint[1] + endPoint[1]) / 2]
-      var point3 = [startPoint[0], endPoint[1]]
-      components = [startPoint, point1, point2, point3]
+      const startPoint = points[0];
+      const endPoint = points[points.length - 1];
+      const point1: Coordinate = [endPoint[0], (startPoint[1] + endPoint[1]) / 2];
+      const point2: Coordinate = [startPoint[0], (startPoint[1] + endPoint[1]) / 2];
+      const point3: Coordinate = [startPoint[0], endPoint[1]];
+      components = [startPoint, point1, point2, point3];
     }
-    return components
+    return components;
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default TriangleFlag
+export default TriangleFlag;

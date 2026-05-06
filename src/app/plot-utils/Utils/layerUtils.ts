@@ -1,3 +1,7 @@
+/**
+ * Created by FDD on 2017/5/1.
+ * @desc 矢量图层操作工具类
+ */
 import {
   Style as $Style,
   Stroke as $Stroke,
@@ -13,75 +17,80 @@ import {
 import { Vector as $VectorSource } from 'ol/source'
 import { Map } from 'ol';
 import BaseLayer from 'ol/layer/Base';
-import VectorLayer from 'ol/layer/Vector';
-/**
- * 通过layerName获取图层
- * @param map 地图实例
- * @param layerName 图层名称
- * @returns 返回一个leyer类型
- */
-const getLayerByLayerName = function (map: Map, layerName: string) {
-  try {
-    let targetLayer: VectorLayer<any> = null
-    if (map) {
-      let layers = map.getLayers().getArray()
-      targetLayer = getLayerInternal(layers, 'layerName', layerName)
-    }
-    return targetLayer
-  } catch (e) {
-    console.log(e)
-  }
+
+/** 创建矢量图层参数接口 */
+interface CreateVectorLayerParams {
+  create?: boolean;
+  selectable?: boolean;
 }
 
 /**
- * 内部处理获取图层方法
- * @param layers 图层集合
- * @param key
- * @param value
+ * 根据图层名称获取图层
+ * @param map 地图对象
+ * @param layerName 图层名称
+ * @returns 矢量图层对象
  */
-const getLayerInternal = function (layers: Array<BaseLayer>, key: string, value: string) {
-  let _target: VectorLayer<any> = null
+const getLayerByLayerName = function (map: Map, layerName: string): $VectorLayer<any> | undefined {
+  try {
+    let targetLayer: $VectorLayer<any> | undefined = undefined;
+    if (map) {
+      const layers = map.getLayers().getArray();
+      targetLayer = getLayerInternal(layers, 'layerName', layerName);
+    }
+    return targetLayer;
+  } catch (e) {
+    console.log(e);
+    return undefined;
+  }
+};
+
+/**
+ * 递归查找图层
+ * @param layers 图层数组
+ * @param key 查找的键
+ * @param value 查找的值
+ * @returns 找到的图层
+ */
+const getLayerInternal = function (layers: BaseLayer[], key: string, value: string): $VectorLayer<any> | undefined {
+  let _target: $VectorLayer<any> | undefined = undefined;
   if (layers.length > 0) {
     layers.every(layer => {
       if (layer instanceof $Group) {
-        let layers = layer.getLayers().getArray()
-        _target = getLayerInternal(layers, key, value)
+        const layers = layer.getLayers().getArray();
+        _target = getLayerInternal(layers, key, value);
         if (_target) {
-          return false
+          return false;
         } else {
-          return true
+          return true;
         }
       } else if (layer.get(key) === value) {
-        _target = layer as VectorLayer<any>
-        return false
+        _target = layer as $VectorLayer<any>;
+        return false;
       } else {
-        return true
+        return true;
       }
-    })
+    });
   }
-  return _target
-}
+  return _target;
+};
 
 /**
- * 创建临时图层
- * @param map 地图实例
+ * 创建矢量图层
+ * @param map 地图对象
  * @param layerName 图层名称
- * @param params {create:boolean,selectable:boolean} 获取不到图层且 create 为true的时候会生成一个新的，样式是默认的，后续可以优化
+ * @param params 创建参数
+ * @returns 创建的矢量图层
  */
-const createVectorLayer = function (map: Map, layerName: string, params: { create?: boolean, selectable?: boolean }) {
+const createVectorLayer = function (map: Map, layerName: string, params: CreateVectorLayerParams = {}): $VectorLayer<any> | undefined {
   try {
     if (map) {
-      let vectorLayer: VectorLayer<any> = getLayerByLayerName(map, layerName)
+      let vectorLayer: $VectorLayer<any> | undefined = getLayerByLayerName(map, layerName);
       if (!(vectorLayer instanceof $VectorLayer)) {
-        vectorLayer = null
+        vectorLayer = undefined;
       }
       if (!vectorLayer) {
         if (params && params.create) {
           vectorLayer = new $VectorLayer({
-            // TODO:待确认这三个字段是否已取消
-            // layerName: layerName,
-            // params: params,
-            // layerType: 'vector',
             source: new $VectorSource({
               wrapX: false
             }),
@@ -100,27 +109,28 @@ const createVectorLayer = function (map: Map, layerName: string, params: { creat
                 })
               })
             })
-          })
+          });
         }
       }
       if (map && vectorLayer) {
         if (params && params.hasOwnProperty('selectable')) {
-          vectorLayer.set('selectable', params.selectable)
+          vectorLayer.set('selectable', params.selectable);
         }
-        // 图层只添加一次
-        let _vectorLayer = getLayerByLayerName(map, layerName)
+        const _vectorLayer = getLayerByLayerName(map, layerName);
         if (!_vectorLayer || !(_vectorLayer instanceof $VectorLayer)) {
-          map.addLayer(vectorLayer)
+          map.addLayer(vectorLayer);
         }
       }
-      return vectorLayer
+      return vectorLayer;
     }
   } catch (e) {
-    console.log(e)
+    console.log(e);
+    return undefined;
   }
-}
+  return undefined;
+};
 
 export {
   createVectorLayer,
   getLayerByLayerName
-}
+};

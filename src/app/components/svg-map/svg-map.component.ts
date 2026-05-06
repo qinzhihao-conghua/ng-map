@@ -8,6 +8,7 @@ import ImageLayer from 'ol/layer/Image';
 import Static from 'ol/source/ImageStatic';
 import XYZ from 'ol/source/XYZ';
 import TileLayer from 'ol/layer/Tile';
+import { sourceArr } from 'src/environments/environment';
 @Component({
   selector: 'app-svg-map',
   templateUrl: './svg-map.component.html',
@@ -17,7 +18,7 @@ export class SvgMapComponent implements OnInit {
 
   title = 'svg-map';
   private map!: Map;
-
+  sourceArr = sourceArr;
   async ngOnInit() {
     // 2. 加载SVG并提取控制点
     const svgContent = await fetch('/assets/上海市底图.svg').then(r => r.text());
@@ -31,7 +32,7 @@ export class SvgMapComponent implements OnInit {
     console.log('SVG 图片地理范围:', extent);
     const baseLayer = new TileLayer({
       source: new XYZ({
-        url: 'http://114.215.146.210:25003/v3/tile?x={x}&y={y}&z={z}',
+        url: this.sourceArr[3].url,
         crossOrigin: 'anonymous'
       })
     })

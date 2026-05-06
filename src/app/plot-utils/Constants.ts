@@ -6,10 +6,10 @@ export const FITTING_COUNT = 100;
 export const HALF_PI = Math.PI / 2;
 export const ZERO_TOLERANCE = 0.0001;
 export const TWO_PI = Math.PI * 2;
-export const BASE_LAYERNAME = 'ol-plot-vector-layer'; // 矢量图层名，（唯一标识）
-export const BASE_HELP_CONTROL_POINT_ID = 'plot-helper-control-point-div'; // 控制点要素的基类id
-export const BASE_HELP_HIDDEN = 'plot-helper-hidden-div'; // 父类隐藏容器
-export const DEF_TEXT_STYEL = { // 默认文本框样式
+export const BASE_LAYERNAME = 'ol-plot-vector-layer';
+export const BASE_HELP_CONTROL_POINT_ID = 'plot-helper-control-point-div';
+export const BASE_HELP_HIDDEN = 'plot-helper-hidden-div';
+export const DEF_TEXT_STYLE = {
   borderRadius: '2px',
   fontSize: '12px',
   outline: 0,
@@ -30,4 +30,4 @@ export const DEF_TEXT_STYEL = { // 默认文本框样式
   background: 'rgb(255, 255, 255)',
   fontStyle: '',
   fontVariant: ''
-};
+} as const;

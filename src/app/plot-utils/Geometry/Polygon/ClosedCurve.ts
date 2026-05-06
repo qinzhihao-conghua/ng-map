@@ -3,143 +3,157 @@
  * @desc 闭合曲面
  * @Inherits ol.geom.Polygon
  */
-import { Map } from 'ol'
-import { Polygon } from 'ol/geom'
-import { CLOSED_CURVE } from '../../Utils/PlotTypes'
-import * as PlotUtils from '../../Utils/utils'
-import * as Constants from '../../Constants'
+import { Map } from 'ol';
+import { Polygon } from 'ol/geom';
+import { CLOSED_CURVE } from '../../Utils/PlotTypes';
+import * as PlotUtils from '../../Utils/utils';
+import * as Constants from '../../Constants';
+import { Coordinate } from 'ol/coordinate';
+
 class ClosedCurve extends Polygon {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = CLOSED_CURVE
-    this.t = 0.3
-    this.set('params', params)
-    if (points && points.length > 0) {
-      this.setPoints(points)
-    } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
-    }
-  }
   type: string;
-  points: Array<any> = [];
-  map: Map;
+  points: Coordinate[];
+  map: Map | undefined;
   t: number;
-  /**
-   * 获取标绘类型
-   */
-  getPlotType() {
-    return this.type
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = CLOSED_CURVE;
+    this.t = 0.3;
+    this.options = params || {};
+    this.points = [];
+    this.set('params', this.options);
+    if (points && points.length > 0) {
+      this.setPoints(points);
+    } else if (coordinates && coordinates.length > 0) {
+      this.setCoordinates(coordinates as any);
+    }
   }
 
   /**
-   * 执行动作
+   * 获取标绘类型
+   * @returns 标绘类型
    */
-  generate() {
-    let points = this.getPointCount()
-    if (points < 2) {
-      return false
-    } else if (points === 2) {
-      this.setCoordinates([this.points])
+  getPlotType(): string {
+    return this.type;
+  }
+
+  /**
+   * 生成闭合曲面图形
+   */
+  generate(): void {
+    const pointCount = this.getPointCount();
+    if (pointCount < 2) {
+      return;
+    } else if (pointCount === 2) {
+      this.setCoordinates([this.points]);
     } else {
-      let pnts = this.getPoints()
-      pnts.push(pnts[0], pnts[1])
-      let [normals, pList] = [[], []]
+      const pnts = this.getPoints();
+      pnts.push(pnts[0], pnts[1]);
+      const normals: Coordinate[] = [];
+      const pList: Coordinate[] = [];
       for (let i = 0; i < pnts.length - 2; i++) {
-        let normalPoints = PlotUtils.getBisectorNormals(this.t, pnts[i], pnts[i + 1], pnts[i + 2])
-        normals = normals.concat(normalPoints)
+        const normalPoints = PlotUtils.getBisectorNormals(this.t, pnts[i], pnts[i + 1], pnts[i + 2]);
+        normals.push(...normalPoints);
       }
-      let count = normals.length
-      normals = [normals[count - 1]].concat(normals.slice(0, count - 1))
+      const count = normals.length;
+      normals.unshift(normals[count - 1]);
+      normals.splice(count, 1);
       for (let i = 0; i < pnts.length - 2; i++) {
-        let pnt1 = pnts[i]
-        let pnt2 = pnts[i + 1]
-        pList.push(pnt1)
+        const pnt1 = pnts[i];
+        const pnt2 = pnts[i + 1];
+        pList.push(pnt1);
         for (let t = 0; t <= Constants.FITTING_COUNT; t++) {
-          let pnt = PlotUtils.getCubicValue(t / Constants.FITTING_COUNT, pnt1, normals[i * 2], normals[i * 2 + 1], pnt2)
-          pList.push(pnt)
+          const pnt = PlotUtils.getCubicValue(t / Constants.FITTING_COUNT, pnt1, normals[i * 2], normals[i * 2 + 1], pnt2);
+          pList.push(pnt);
         }
-        pList.push(pnt2)
+        pList.push(pnt2);
       }
-      this.setCoordinates([pList])
+      this.setCoordinates([pList]);
     }
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default ClosedCurve
+export default ClosedCurve;

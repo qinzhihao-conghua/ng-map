@@ -3,131 +3,143 @@
  * @desc 规则矩形
  * @Inherits ol.geom.Polygon
  */
-import { Map } from 'ol'
-import { Polygon as $Polygon } from 'ol/geom'
-import { fromExtent } from 'ol/geom/Polygon'
-import { boundingExtent } from 'ol/extent.js'
-import { RECTANGLE } from '../../Utils/PlotTypes'
+import { Map } from 'ol';
+import { Polygon as $Polygon } from 'ol/geom';
+import { fromExtent } from 'ol/geom/Polygon';
+import { boundingExtent } from 'ol/extent.js';
+import { RECTANGLE } from '../../Utils/PlotTypes';
+import { Coordinate } from 'ol/coordinate';
+
 class RectAngle extends $Polygon {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = RECTANGLE
-    this.fixPointCount = 2
-    this.set('params', params)
-    this.isFill = ((params['isFill'] === false) ? params['isFill'] : true)
-    if (points && points.length > 0) {
-      this.setPoints(points)
-    } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
-    }
-  }
   type: string;
-  points: Array<any> = [];
-  map: Map;
+  points: Coordinate[];
+  map: Map | undefined;
   fixPointCount: number;
   isFill: boolean;
-  /**
-   * 获取标绘类型
-   */
-  getPlotType() {
-    return this.type
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = RECTANGLE;
+    this.fixPointCount = 2;
+    this.options = params || {};
+    this.points = [];
+    this.isFill = ((params && params['isFill'] === false) ? params['isFill'] as boolean : true);
+    this.set('params', this.options);
+    if (points && points.length > 0) {
+      this.setPoints(points);
+    } else if (coordinates && coordinates.length > 0) {
+      this.setCoordinates(coordinates as any);
+    }
   }
 
   /**
-   * 执行动作
+   * 获取标绘类型
+   * @returns 标绘类型
    */
-  generate() {
+  getPlotType(): string {
+    return this.type;
+  }
+
+  /**
+   * 生成矩形图形
+   */
+  generate(): void {
     if (this.points.length === 2) {
-      let coordinates = []
+      let coordinates: Coordinate[][] | Coordinate[];
       if (this.isFill) {
-        let extent = boundingExtent(this.points)
-        let polygon = fromExtent(extent)
-        coordinates = polygon.getCoordinates()
+        const extent = boundingExtent(this.points);
+        const polygon = fromExtent(extent);
+        coordinates = polygon.getCoordinates() as Coordinate[][];
       } else {
-        let start = this.points[0]
-        let end = this.points[1]
-        coordinates = [start, [start[0], end[1]], end, [end[0], start[1]], start]
+        const start = this.points[0];
+        const end = this.points[1];
+        coordinates = [start, [start[0], end[1]], end, [end[0], start[1]], start];
       }
-      this.setCoordinates(coordinates)
+      this.setCoordinates(coordinates as any);
     }
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default RectAngle
+export default RectAngle;

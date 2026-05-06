@@ -3,289 +3,318 @@
  * @desc 进攻方向
  * @Inherits ol.geom.Polygon
  */
-import { Map } from 'ol'
-import { Polygon } from 'ol/geom'
-import { ATTACK_ARROW } from '../../Utils/PlotTypes'
-import * as PlotUtils from '../../Utils/utils'
-import * as Constants from '../../Constants'
+import { Map } from 'ol';
+import { Polygon } from 'ol/geom';
+import { ATTACK_ARROW } from '../../Utils/PlotTypes';
+import * as PlotUtils from '../../Utils/utils';
+import * as Constants from '../../Constants';
+import { Coordinate } from 'ol/coordinate';
+
 class AttackArrow extends Polygon {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = ATTACK_ARROW
-    this.headHeightFactor = 0.18
-    this.headWidthFactor = 0.3
-    this.neckHeightFactor = 0.85
-    this.neckWidthFactor = 0.15
-    this.headTailFactor = 0.8
-    this.set('params', params)
-    if (points && points.length > 0) {
-      this.setPoints(points)
-    } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
-    }
-  }
   type: string;
-  points: Array<any> = [];
-  map: Map;
+  points: Coordinate[];
+  map: Map | undefined;
   headHeightFactor: number;
   headWidthFactor: number;
   neckHeightFactor: number;
   neckWidthFactor: number;
   headTailFactor: number;
   fixPointCount: number;
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = ATTACK_ARROW;
+    this.headHeightFactor = 0.18;
+    this.headWidthFactor = 0.3;
+    this.neckHeightFactor = 0.85;
+    this.neckWidthFactor = 0.15;
+    this.headTailFactor = 0.8;
+    this.fixPointCount = 4;
+    this.options = params || {};
+    this.points = [];
+    this.set('params', this.options);
+    if (points && points.length > 0) {
+      this.setPoints(points);
+    } else if (coordinates && coordinates.length > 0) {
+      this.setCoordinates(coordinates as any);
+    }
+  }
+
   /**
    * 获取标绘类型
+   * @returns 标绘类型
    */
-  getPlotType() {
-    return this.type
+  getPlotType(): string {
+    return this.type;
   }
 
   /**
-   * 执行动作
+   * 生成进攻方向箭头图形
    */
-  generate() {
+  generate(): void {
     try {
-      let points = this.getPointCount()
+      const points = this.getPointCount();
       if (points < 2) {
-        return false
+        return;
       } else if (points === 2) {
-        this.setCoordinates([this.points])
+        this.setCoordinates([this.points]);
       } else {
-        let pnts = this.getPoints()
-        let [tailLeft, tailRight] = [pnts[0], pnts[1]]
+        const pnts = this.getPoints();
+        let tailLeft = pnts[0];
+        let tailRight = pnts[1];
         if (PlotUtils.isClockWise(pnts[0], pnts[1], pnts[2])) {
-          tailLeft = pnts[1]
-          tailRight = pnts[0]
+          tailLeft = pnts[1];
+          tailRight = pnts[0];
         }
-        let midTail = PlotUtils.Mid(tailLeft, tailRight)
-        let bonePnts = [midTail].concat(pnts.slice(2))
-        let headPnts = this.getArrowHeadPoints(bonePnts, tailLeft, tailRight)
-        let [neckLeft, neckRight] = [headPnts[0], headPnts[4]]
-        let tailWidthFactor = PlotUtils.MathDistance(tailLeft, tailRight) / PlotUtils.getBaseLength(bonePnts)
-        let bodyPnts = this.getArrowBodyPoints(bonePnts, neckLeft, neckRight, tailWidthFactor)
-        let count = bodyPnts.length
-        let leftPnts = [tailLeft].concat(bodyPnts.slice(0, count / 2))
-        leftPnts.push(neckLeft)
-        let rightPnts = [tailRight].concat(bodyPnts.slice(count / 2, count))
-        rightPnts.push(neckRight)
-        leftPnts = PlotUtils.getQBSplinePoints(leftPnts)
-        rightPnts = PlotUtils.getQBSplinePoints(rightPnts)
-        this.setCoordinates([leftPnts.concat(headPnts, rightPnts.reverse())])
+        const midTail = PlotUtils.Mid(tailLeft, tailRight);
+        const bonePnts = [midTail].concat(pnts.slice(2));
+        const headPnts = this.getArrowHeadPoints(bonePnts, tailLeft, tailRight);
+        const neckLeft = headPnts![0];
+        const neckRight = headPnts![4];
+        const tailWidthFactor = PlotUtils.MathDistance(tailLeft, tailRight) / PlotUtils.getBaseLength(bonePnts);
+        const bodyPnts = this.getArrowBodyPoints(bonePnts, neckLeft, neckRight, tailWidthFactor);
+        const count = bodyPnts.length;
+        const leftPnts = [tailLeft].concat(bodyPnts.slice(0, count / 2));
+        leftPnts.push(neckLeft);
+        const rightPnts = [tailRight].concat(bodyPnts.slice(count / 2, count));
+        rightPnts.push(neckRight);
+        const leftSmooth = PlotUtils.getQBSplinePoints(leftPnts);
+        const rightSmooth = PlotUtils.getQBSplinePoints(rightPnts);
+        this.setCoordinates([leftSmooth.concat(headPnts!, rightSmooth.reverse())]);
       }
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
   }
 
   /**
-   * 插值箭形上的点
-   * @param pnt1
-   * @param pnt2
-   * @param pnt3
-   * @param clockWise
+   * 获取箭头点集
+   * @param pnt1 起始点1
+   * @param pnt2 起始点2
+   * @param pnt3 目标点
+   * @param clockWise 是否顺时针
+   * @returns 箭头点集
    */
-  getArrowPoints(pnt1, pnt2, pnt3, clockWise) {
-    let midPnt = PlotUtils.Mid(pnt1, pnt2)
-    let len = PlotUtils.MathDistance(midPnt, pnt3)
-    let midPnt1 = PlotUtils.getThirdPoint(pnt3, midPnt, 0, len * 0.3, true)
-    let midPnt2 = PlotUtils.getThirdPoint(pnt3, midPnt, 0, len * 0.5, true)
-    midPnt1 = PlotUtils.getThirdPoint(midPnt, midPnt1, Constants.HALF_PI, len / 5, clockWise)
-    midPnt2 = PlotUtils.getThirdPoint(midPnt, midPnt2, Constants.HALF_PI, len / 4, clockWise)
-    let points = [midPnt, midPnt1, midPnt2, pnt3]
-    let arrowPnts = this.getArrowHeadPoints(points)
+  getArrowPoints(pnt1: Coordinate, pnt2: Coordinate, pnt3: Coordinate, clockWise: boolean): Coordinate[] | undefined {
+    const midPnt = PlotUtils.Mid(pnt1, pnt2);
+    const len = PlotUtils.MathDistance(midPnt, pnt3);
+    const midPnt1 = PlotUtils.getThirdPoint(pnt3, midPnt, 0, len * 0.3, true);
+    const midPnt2 = PlotUtils.getThirdPoint(pnt3, midPnt, 0, len * 0.5, true);
+    const midPnt1Offset = PlotUtils.getThirdPoint(midPnt, midPnt1, Constants.HALF_PI, len / 5, clockWise);
+    const midPnt2Offset = PlotUtils.getThirdPoint(midPnt, midPnt2, Constants.HALF_PI, len / 4, clockWise);
+    const points = [midPnt, midPnt1Offset, midPnt2Offset, pnt3];
+    const arrowPnts = this.getArrowHeadPoints(points);
     if (arrowPnts && Array.isArray(arrowPnts) && arrowPnts.length > 0) {
-      let [neckLeftPoint, neckRightPoint] = [arrowPnts[0], arrowPnts[4]]
-      let tailWidthFactor = PlotUtils.MathDistance(pnt1, pnt2) / PlotUtils.getBaseLength(points) / 2
-      let bodyPnts = this.getArrowBodyPoints(points, neckLeftPoint, neckRightPoint, tailWidthFactor)
+      const neckLeftPoint = arrowPnts[0];
+      const neckRightPoint = arrowPnts[4];
+      const tailWidthFactor = PlotUtils.MathDistance(pnt1, pnt2) / PlotUtils.getBaseLength(points) / 2;
+      const bodyPnts = this.getArrowBodyPoints(points, neckLeftPoint, neckRightPoint, tailWidthFactor);
       if (bodyPnts) {
-        let n = bodyPnts.length
-        let lPoints = bodyPnts.slice(0, n / 2)
-        let rPoints = bodyPnts.slice(n / 2, n)
-        lPoints.push(neckLeftPoint)
-        rPoints.push(neckRightPoint)
-        lPoints = lPoints.reverse()
-        lPoints.push(pnt2)
-        rPoints = rPoints.reverse()
-        rPoints.push(pnt1)
-        return (lPoints.reverse().concat(arrowPnts, rPoints))
+        const n = bodyPnts.length;
+        const lPoints = bodyPnts.slice(0, n / 2);
+        const rPoints = bodyPnts.slice(n / 2, n);
+        lPoints.push(neckLeftPoint);
+        rPoints.push(neckRightPoint);
+        lPoints.reverse();
+        lPoints.push(pnt2);
+        rPoints.reverse();
+        rPoints.push(pnt1);
+        return lPoints.reverse().concat(arrowPnts, rPoints);
       }
     } else {
-      throw new Error('插值出错')
+      throw new Error('插值出错');
     }
+    return undefined;
   }
 
   /**
-   * 插值头部点
-   * @param points
-   * TODO: tailLeft, tailRight是否是必须的待验证
+   * 获取箭头头部点集
+   * @param points 控制点集
+   * @param tailLeft 尾部左点
+   * @param tailRight 尾部右点
+   * @returns 箭头头部点集
    */
-  getArrowHeadPoints(points, tailLeft?, tailRight?) {
+  getArrowHeadPoints(points: Coordinate[], tailLeft?: Coordinate, tailRight?: Coordinate): Coordinate[] | undefined {
     try {
-      let len = PlotUtils.getBaseLength(points)
-      let headHeight = len * this.headHeightFactor
-      let headPnt = points[points.length - 1]
-      len = PlotUtils.MathDistance(headPnt, points[points.length - 2])
-      let tailWidth = PlotUtils.MathDistance(tailLeft, tailRight)
+      const len = PlotUtils.getBaseLength(points);
+      let headHeight = len * this.headHeightFactor;
+      const headPnt = points[points.length - 1];
+      const len2 = PlotUtils.MathDistance(headPnt, points[points.length - 2]);
+      const tailWidth = PlotUtils.MathDistance(tailLeft!, tailRight!);
       if (headHeight > tailWidth * this.headTailFactor) {
-        headHeight = tailWidth * this.headTailFactor
+        headHeight = tailWidth * this.headTailFactor;
       }
-      let headWidth = headHeight * this.headWidthFactor
-      let neckWidth = headHeight * this.neckWidthFactor
-      headHeight = headHeight > len ? len : headHeight
-      let neckHeight = headHeight * this.neckHeightFactor
-      let headEndPnt = PlotUtils.getThirdPoint(points[points.length - 2], headPnt, 0, headHeight, true)
-      let neckEndPnt = PlotUtils.getThirdPoint(points[points.length - 2], headPnt, 0, neckHeight, true)
-      let headLeft = PlotUtils.getThirdPoint(headPnt, headEndPnt, Constants.HALF_PI, headWidth, false)
-      let headRight = PlotUtils.getThirdPoint(headPnt, headEndPnt, Constants.HALF_PI, headWidth, true)
-      let neckLeft = PlotUtils.getThirdPoint(headPnt, neckEndPnt, Constants.HALF_PI, neckWidth, false)
-      let neckRight = PlotUtils.getThirdPoint(headPnt, neckEndPnt, Constants.HALF_PI, neckWidth, true)
-      return [neckLeft, headLeft, headPnt, headRight, neckRight]
+      const headWidth = headHeight * this.headWidthFactor;
+      const neckWidth = headHeight * this.neckWidthFactor;
+      headHeight = headHeight > len2 ? len2 : headHeight;
+      const neckHeight = headHeight * this.neckHeightFactor;
+      const headEndPnt = PlotUtils.getThirdPoint(points[points.length - 2], headPnt, 0, headHeight, true);
+      const neckEndPnt = PlotUtils.getThirdPoint(points[points.length - 2], headPnt, 0, neckHeight, true);
+      const headLeft = PlotUtils.getThirdPoint(headPnt, headEndPnt, Constants.HALF_PI, headWidth, false);
+      const headRight = PlotUtils.getThirdPoint(headPnt, headEndPnt, Constants.HALF_PI, headWidth, true);
+      const neckLeft = PlotUtils.getThirdPoint(headPnt, neckEndPnt, Constants.HALF_PI, neckWidth, false);
+      const neckRight = PlotUtils.getThirdPoint(headPnt, neckEndPnt, Constants.HALF_PI, neckWidth, true);
+      return [neckLeft, headLeft, headPnt, headRight, neckRight];
     } catch (e) {
-      console.log(e)
+      console.log(e);
+      return undefined;
     }
   }
 
   /**
-   * 插值面部分数据
-   * @param points
-   * @param neckLeft
-   * @param neckRight
-   * @param tailWidthFactor
+   * 获取箭头身体点集
+   * @param points 控制点集
+   * @param neckLeft 颈部左点
+   * @param neckRight 颈部右点
+   * @param tailWidthFactor 尾部宽度因子
+   * @returns 箭头身体点集
    */
-  getArrowBodyPoints(points, neckLeft, neckRight, tailWidthFactor) {
-    let allLen = PlotUtils.wholeDistance(points)
-    let len = PlotUtils.getBaseLength(points)
-    let tailWidth = len * tailWidthFactor
-    let neckWidth = PlotUtils.MathDistance(neckLeft, neckRight)
-    let widthDif = (tailWidth - neckWidth) / 2
-    let [tempLen, leftBodyPnts, rightBodyPnts] = [0, [], []]
+  getArrowBodyPoints(points: Coordinate[], neckLeft: Coordinate, neckRight: Coordinate, tailWidthFactor: number): Coordinate[] {
+    const allLen = PlotUtils.wholeDistance(points);
+    const len = PlotUtils.getBaseLength(points);
+    const tailWidth = len * tailWidthFactor;
+    const neckWidth = PlotUtils.MathDistance(neckLeft, neckRight);
+    const widthDif = (tailWidth - neckWidth) / 2;
+    let tempLen = 0;
+    const leftBodyPnts: Coordinate[] = [];
+    const rightBodyPnts: Coordinate[] = [];
     for (let i = 1; i < points.length - 1; i++) {
-      let angle = PlotUtils.getAngleOfThreePoints(points[i - 1], points[i], points[i + 1]) / 2
-      tempLen += PlotUtils.MathDistance(points[i - 1], points[i])
-      let w = (tailWidth / 2 - tempLen / allLen * widthDif) / Math.sin(angle)
-      let left = PlotUtils.getThirdPoint(points[i - 1], points[i], Math.PI - angle, w, true)
-      let right = PlotUtils.getThirdPoint(points[i - 1], points[i], angle, w, false)
-      leftBodyPnts.push(left)
-      rightBodyPnts.push(right)
+      const angle = PlotUtils.getAngleOfThreePoints(points[i - 1], points[i], points[i + 1]) / 2;
+      tempLen += PlotUtils.MathDistance(points[i - 1], points[i]);
+      const w = (tailWidth / 2 - tempLen / allLen * widthDif) / Math.sin(angle);
+      const left = PlotUtils.getThirdPoint(points[i - 1], points[i], Math.PI - angle, w, true);
+      const right = PlotUtils.getThirdPoint(points[i - 1], points[i], angle, w, false);
+      leftBodyPnts.push(left);
+      rightBodyPnts.push(right);
     }
-    return leftBodyPnts.concat(rightBodyPnts)
+    return leftBodyPnts.concat(rightBodyPnts);
   }
 
   /**
-   * 获取对称点
-   * @param linePnt1
-   * @param linePnt2
-   * @param point
+   * 获取第四个临时点
+   * @param linePnt1 线段点1
+   * @param linePnt2 线段点2
+   * @param point 目标点
+   * @returns 第四个临时点
    */
-  getTempPoint4(linePnt1, linePnt2, point) {
+  getTempPoint4(linePnt1: Coordinate, linePnt2: Coordinate, point: Coordinate): Coordinate | undefined {
     try {
-      let midPnt = PlotUtils.Mid(linePnt1, linePnt2)
-      let len = PlotUtils.MathDistance(midPnt, point)
-      let angle = PlotUtils.getAngleOfThreePoints(linePnt1, midPnt, point)
-      let [symPnt, distance1, distance2, mid] = [undefined, undefined, undefined, undefined]
+      const midPnt = PlotUtils.Mid(linePnt1, linePnt2);
+      const len = PlotUtils.MathDistance(midPnt, point);
+      const angle = PlotUtils.getAngleOfThreePoints(linePnt1, midPnt, point);
+      let symPnt: Coordinate | undefined;
+      let distance1: number;
+      let distance2: number;
+      let mid: Coordinate | undefined;
       if (angle < Constants.HALF_PI) {
-        distance1 = len * Math.sin(angle)
-        distance2 = len * Math.cos(angle)
-        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, false)
-        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, true)
+        distance1 = len * Math.sin(angle);
+        distance2 = len * Math.cos(angle);
+        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, false);
+        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, true);
       } else if (angle >= Constants.HALF_PI && angle < Math.PI) {
-        distance1 = len * Math.sin(Math.PI - angle)
-        distance2 = len * Math.cos(Math.PI - angle)
-        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, false)
-        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, false)
+        distance1 = len * Math.sin(Math.PI - angle);
+        distance2 = len * Math.cos(Math.PI - angle);
+        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, false);
+        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, false);
       } else if (angle >= Math.PI && angle < Math.PI * 1.5) {
-        distance1 = len * Math.sin(angle - Math.PI)
-        distance2 = len * Math.cos(angle - Math.PI)
-        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, true)
-        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, true)
+        distance1 = len * Math.sin(angle - Math.PI);
+        distance2 = len * Math.cos(angle - Math.PI);
+        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, true);
+        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, true);
       } else {
-        distance1 = len * Math.sin(Math.PI * 2 - angle)
-        distance2 = len * Math.cos(Math.PI * 2 - angle)
-        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, true)
-        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, false)
+        distance1 = len * Math.sin(Math.PI * 2 - angle);
+        distance2 = len * Math.cos(Math.PI * 2 - angle);
+        mid = PlotUtils.getThirdPoint(linePnt1, midPnt, Constants.HALF_PI, distance1, true);
+        symPnt = PlotUtils.getThirdPoint(midPnt, mid, Constants.HALF_PI, distance2, false);
       }
-      return symPnt
+      return symPnt;
     } catch (e) {
-      console.log(e)
+      console.log(e);
+      return undefined;
     }
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default AttackArrow
+export default AttackArrow;

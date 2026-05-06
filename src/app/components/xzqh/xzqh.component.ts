@@ -13,6 +13,7 @@ import MultiPolygon from 'ol/geom/MultiPolygon';
 import { getVectorContext } from 'ol/render';
 import Style from 'ol/style/Style';
 import Fill from 'ol/style/Fill';
+import { sourceArr } from 'src/environments/environment';
 
 @Component({
   selector: 'app-xzqh',
@@ -24,7 +25,7 @@ export class XzqhComponent implements OnInit {
   constructor() { }
   map: Map;
   mapInstance: OlMapService = null;
-
+  sourceArr = sourceArr
   ngOnInit(): void {
   }
   ngAfterViewInit() {
@@ -43,13 +44,13 @@ export class XzqhComponent implements OnInit {
     // this.map = this.mapInstance.initMap('map-container', viewOptions);
     const dtc = new TileLayer({
       source: new XYZ({
-        url: 'http://114.215.146.210:25003/v3/tile?x={x}&y={y}&z={z}',
+        url: this.sourceArr[3].url,
         crossOrigin: 'anonymous'
       })
     });
     const zzc = new TileLayer({
       source: new XYZ({
-        url: 'http://114.215.146.210:25003/v3/tile?x={x}&y={y}&z={z}',
+        url: this.sourceArr[3].url,
         crossOrigin: 'anonymous'
       })
     });

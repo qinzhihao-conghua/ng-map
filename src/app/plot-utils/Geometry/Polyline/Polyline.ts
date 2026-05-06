@@ -1,114 +1,129 @@
-import { Map } from 'ol'
-import { LineString } from 'ol/geom'
+/**
+ * Created by FDD on 2017/5/22.
+ * @desc 折线
+ */
+import { Map } from 'ol';
+import { LineString } from 'ol/geom';
+import { POLYLINE } from '../../Utils/PlotTypes';
+import { Coordinate } from 'ol/coordinate';
 
-import { POLYLINE } from '../../Utils/PlotTypes'
+/**
+ * 折线类，继承LineString
+ */
 class Polyline extends LineString {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = POLYLINE
-    this.freehand = false
-    this.set('params', params)
+  type: string;
+  points: Coordinate[];
+  map: Map | undefined;
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = POLYLINE;
+    this.options = params || {};
+    this.points = [];
+    this.set('params', this.options);
     if (points && points.length > 0) {
-      this.setPoints(points)
+      this.setPoints(points);
     } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
+      this.setCoordinates(coordinates as any);
     }
   }
-  type: string;
-  freehand: boolean;
-  points = [];
-  map: Map;
 
   /**
    * 获取标绘类型
+   * @returns 标绘类型
    */
-  getPlotType() {
-    return this.type
+  getPlotType(): string {
+    return this.type;
   }
 
   /**
-   * 执行动作
+   * 生成图形
    */
-  generate() {
-    this.setCoordinates(this.points)
+  generate(): void {
+    this.setCoordinates(this.points);
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 是否为标绘
+   * @returns 是否为标绘
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置点集
+   * @param value 点集
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
-    if (this.points.length >= 1) {
-      this.generate()
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
+    if (this.points.length >= 2) {
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取点集
+   * @returns 点集
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
    * 获取点数量
+   * @returns 点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新点
+   * @param point 新点坐标
+   * @param index 点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个点
+   * @param point 新点坐标
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default Polyline
+export default Polyline;

@@ -21,386 +21,427 @@ import * as Geometry from '../Geometry'
 import { createVectorLayer, getLayerByLayerName } from '../Utils/layerUtils'
 import { BASE_LAYERNAME } from '../Constants'
 import { Coordinate } from 'ol/coordinate'
+
+interface PlotUtilsOptions {
+  layerName?: string;
+  zIndex?: number;
+  zoomToExtent?: boolean;
+  [key: string]: unknown;
+}
+
+interface ExtentParams {
+  adjust?: number;
+  minWidth?: number;
+  minHeight?: number;
+}
+
+interface StyleCode {
+  fill: {
+    fillColor: string | undefined;
+    opacity: number;
+  };
+  stroke: Record<string, unknown>;
+  image: Record<string, unknown>;
+  text: Record<string, unknown>;
+}
+
 class PlotUtils {
-  constructor(map, options) {
+  private map: Map;
+  private options: PlotUtilsOptions;
+  private layerName: string;
+  type: string | undefined;
+  points: Coordinate[];
+
+  constructor(map: Map, options: PlotUtilsOptions = {}) {
     if (map && map instanceof Map) {
       this.map = map
     } else {
       throw new Error('传入的不是地图对象！')
     }
 
-    this.options = options
-    this.layerName = ((this.options && this.options['layerName']) ? this.options['layerName'] : BASE_LAYERNAME)
-  }
-  type: string;
-  points: Array<Coordinate> = [];
-  map: Map;
-  options;
-  layerName: string;
-  /**
-   * 获取样式信息
-   * @param feature
-   */
-  getBaseStyle(feature) {
-    let style = feature.getStyle()
-    if (!style) {
-      let layer = getLayerByLayerName(this.map, this.layerName)
-      if (layer && layer instanceof VectorLayer) {
-        style = layer.getStyle()
-      } else {
-        // return false
-      }
-    }
-    return style
+    this.options = options;
+    this.layerName = (this.options && this.options['layerName']) ? this.options['layerName'] as string : BASE_LAYERNAME;
+    this.type = undefined;
+    this.points = [];
   }
 
   /**
-   * 设置点类型的图标样式
-   * @param feature
-   * @param image 图像的样式，未明确类型
+   * 获取基础样式
+   * @param feature 要素对象
+   * @returns 样式对象
    */
-  setIcon(feature: Feature, image) {
+  private getBaseStyle(feature: Feature): Style | undefined {
+    let style = feature.getStyle();
+    if (!style) {
+      const layer = getLayerByLayerName(this.map, this.layerName);
+      if (layer && layer instanceof VectorLayer) {
+        style = layer.getStyle() as Style | undefined;
+      }
+    }
+    return style as Style | undefined;
+  }
+
+  /**
+   * 设置图标
+   * @param feature 要素对象
+   * @param image 图标对象
+   */
+  setIcon(feature: Feature, image: Icon | RegularShape | undefined): void {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
-        let tempStyle = style.clone()
-        let _image = this.getImage_(image)
-        // let _image = null;
-        if (_image) {
-          tempStyle.setImage(_image)
-          feature.setStyle(tempStyle)
+        const style = this.getBaseStyle(feature);
+        if (style) {
+          const tempStyle = style.clone();
+          if (image) {
+            tempStyle.setImage(image);
+            feature.setStyle(tempStyle);
+          }
         }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
   }
 
   /**
    * 设置背景颜色
-   * @param feature
-   * @param backgroundColor
+   * @param feature 要素对象
+   * @param backgroundColor 背景颜色
    */
-  setBackgroundColor(feature: Feature, backgroundColor: string) {
+  setBackgroundColor(feature: Feature, backgroundColor: string): void {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
-        let tempStyle = style.clone()
-        let fill = tempStyle.getFill()
-        let color = fill.getColor()
-        if (color) {
-          let tempColor = asArray(color)
-          let _color = asArray(backgroundColor)
-          let currentColor = this.handleBackgroundColor(_color, tempColor[3])
-          fill.setColor(currentColor)
-          feature.setStyle(tempStyle)
+        const style = this.getBaseStyle(feature);
+        if (style) {
+          const tempStyle = style.clone();
+          const fill = tempStyle.getFill();
+          if (fill) {
+            const color = fill.getColor();
+            if (color) {
+              const tempColor = asArray(color as any);
+              const _color = asArray(backgroundColor);
+              const currentColor = this.handleBackgroundColor(_color, tempColor[3]);
+              fill.setColor(currentColor);
+              feature.setStyle(tempStyle);
+            }
+          }
         }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
   }
 
   /**
    * 设置透明度
-   * @param feature
-   * @param opacity
+   * @param feature 要素对象
+   * @param opacity 透明度值（0-1）
    */
-  setOpacity(feature: Feature, opacity: number) {
+  setOpacity(feature: Feature, opacity: number): void {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
+        const style = this.getBaseStyle(feature);
         if (style) {
-          let tempStyle = style.clone()
-          let fill = tempStyle.getFill()
-          let color = fill.getColor()
-          if (color) {
-            let tempColor = asArray(color)
-            tempColor[3] = opacity
-            let currentColor = 'rgba(' + tempColor.join(',') + ')'
-            fill.setColor(currentColor)
-            feature.setStyle(tempStyle)
+          const tempStyle = style.clone();
+          const fill = tempStyle.getFill();
+          if (fill) {
+            const color = fill.getColor();
+            if (color) {
+              const tempColor = asArray(color as any);
+              tempColor[3] = opacity;
+              const currentColor = 'rgba(' + tempColor.join(',') + ')';
+              fill.setColor(currentColor);
+              feature.setStyle(tempStyle);
+            }
           }
         }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
   }
 
   /**
    * 设置边框颜色
-   * @param feature
-   * @param borderColor
+   * @param feature 要素对象
+   * @param borderColor 边框颜色
    */
-  setBorderColor(feature: Feature, borderColor: string) {
+  setBorderColor(feature: Feature, borderColor: string): void {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
-        let tempStyle = style.clone()
-        let stroke = tempStyle.getStroke()
-        stroke.setColor(borderColor)
-        feature.setStyle(tempStyle)
+        const style = this.getBaseStyle(feature);
+        if (style) {
+          const tempStyle = style.clone();
+          const stroke = tempStyle.getStroke();
+          if (stroke) {
+            stroke.setColor(borderColor);
+            feature.setStyle(tempStyle);
+          }
+        }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
   }
 
   /**
    * 设置边框宽度
-   * @param feature
-   * @param borderWidth
+   * @param feature 要素对象
+   * @param borderWidth 边框宽度
    */
-  setBorderWidth(feature: Feature, borderWidth: number) {
+  setBorderWidth(feature: Feature, borderWidth: number): void {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
-        let tempStyle = style.clone()
-        let stroke = tempStyle.getStroke()
-        stroke.setWidth(borderWidth)
-        feature.setStyle(tempStyle)
+        const style = this.getBaseStyle(feature);
+        if (style) {
+          const tempStyle = style.clone();
+          const stroke = tempStyle.getStroke();
+          if (stroke) {
+            stroke.setWidth(borderWidth);
+            feature.setStyle(tempStyle);
+          }
+        }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
   }
 
   /**
-   * 处理背景色
-   * @param color
-   * @param opacity
+   * 处理背景颜色
+   * @param color 颜色值
+   * @param opacity 透明度
+   * @returns RGBA颜色字符串
    */
-  handleBackgroundColor(color, opacity: number) {
+  private handleBackgroundColor(color: number[] | string, opacity?: number): string {
     try {
-      if (!opacity) opacity = 1
-      let tempColor = asArray(color)
-      tempColor[3] = opacity
-      return ('rgba(' + tempColor.join(',') + ')')
+      if (!opacity) opacity = 1;
+      const tempColor = asArray(color);
+      tempColor[3] = opacity;
+      return 'rgba(' + tempColor.join(',') + ')';
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
+      return '';
     }
   }
 
   /**
-   * 获取颜色值
-   * @param color
+   * 转换颜色值
+   * @param color 颜色值
+   * @returns 颜色字符串
    */
-  getColor(color: string) {
+  private getColor(color: string | number[]): string | undefined {
     try {
-      let colorTarget = asArray(color)
-      return (asString(colorTarget))
+      const colorTarget = asArray(color);
+      return asString(colorTarget);
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
+      return undefined;
     }
   }
 
   /**
-   * 去除无值的字段
-   * @param obj
+   * 修复对象中的undefined属性
+   * @param obj 对象
+   * @returns 修复后的对象
    */
-  fixObject(obj) {
+  private fixObject<T extends Record<string, unknown>>(obj: T | null): T | null {
     if (obj && typeof obj === 'object') {
-      for (let key in obj) {
+      for (const key in obj) {
         if (key && typeof obj[key] === 'undefined') {
-          delete obj[key]
+          delete obj[key];
         }
       }
     }
-    return obj
+    return obj;
   }
 
   /**
-   * 获取stroke
-   * @param style
+   * 获取描边样式信息
+   * @param style 样式对象
+   * @returns 描边样式信息
    */
-  getStroke_(style) {
-    let stroke = null
+  private getStroke_(style: any): Record<string, unknown> | null {
+    let stroke: Record<string, unknown> | null = null;
     if (style) {
-      let olStyle_ = style.getStroke()
+      const olStyle_ = style.getStroke();
       if (olStyle_) {
-        stroke = {}
-        stroke['strokeColor'] = this.getColor(olStyle_.getColor())
-        stroke['strokeWidth'] = olStyle_.getWidth()
-        stroke['strokeLineDash'] = olStyle_.getLineDash()
-        stroke['lineDashOffset'] = olStyle_.getLineDashOffset()
-        stroke['strokeLineCap'] = olStyle_.getLineCap()
-        stroke['strokeLineJoin'] = olStyle_.getLineJoin()
-        stroke['strokeMiterLimit'] = olStyle_.getMiterLimit()
+        stroke = {};
+        stroke['strokeColor'] = this.getColor(olStyle_.getColor() as any);
+        stroke['strokeWidth'] = olStyle_.getWidth();
+        stroke['strokeLineDash'] = olStyle_.getLineDash();
+        stroke['lineDashOffset'] = olStyle_.getLineDashOffset();
+        stroke['strokeLineCap'] = olStyle_.getLineCap();
+        stroke['strokeLineJoin'] = olStyle_.getLineJoin();
+        stroke['strokeMiterLimit'] = olStyle_.getMiterLimit();
       }
     }
-    return this.fixObject(stroke)
+    return this.fixObject(stroke);
   }
 
   /**
-   * 获取填充色
-   * @param style
-   * @private
+   * 获取填充样式信息
+   * @param style 样式对象
+   * @returns 填充样式信息
    */
-  getFill_(style) {
-    let fill = null
+  private getFill_(style: any): Record<string, unknown> | null {
+    let fill: Record<string, unknown> | null = null;
     if (style) {
-      let olStyle_ = style.getFill()
+      const olStyle_ = style.getFill();
       if (olStyle_) {
-        fill = {}
-        let color = olStyle_.getColor()
-        fill['fillColor'] = this.getColor(color)
+        fill = {};
+        const color = olStyle_.getColor();
+        fill['fillColor'] = this.getColor(color as any);
       }
     }
-    return this.fixObject(fill)
+    return this.fixObject(fill);
   }
 
   /**
-   * 获取文本信息
-   * @param style
-   * @private
+   * 获取文本样式信息
+   * @param style 样式对象
+   * @returns 文本样式信息
    */
-  getText_(style) {
-    let text = null
+  private getText_(style: Style | undefined): Record<string, unknown> | null {
+    let text: Record<string, unknown> | null = null;
     if (style) {
-      let olStyle_ = style.getText()
+      const olStyle_ = style.getText();
       if (olStyle_) {
-        text = {}
-        text['textFont'] = olStyle_.getFont()
-        text['textOffsetX'] = olStyle_.getOffsetX()
-        text['textOffsetY'] = olStyle_.getOffsetY()
-        text['textScale'] = olStyle_.getScale()
-        text['textRotation'] = olStyle_.getRotation()
-        text['text'] = olStyle_.getText()
-        text['textAlign'] = olStyle_.getTextAlign()
-        text['textBaseline'] = olStyle_.getTextBaseline()
-        text['rotateWithView'] = olStyle_.getRotateWithView()
-        text['textFill'] = this.getFill_(olStyle_)
-        text['textStroke'] = this.getStroke_(olStyle_)
+        text = {};
+        text['textFont'] = olStyle_.getFont();
+        text['textOffsetX'] = olStyle_.getOffsetX();
+        text['textOffsetY'] = olStyle_.getOffsetY();
+        text['textScale'] = olStyle_.getScale();
+        text['textRotation'] = olStyle_.getRotation();
+        text['text'] = olStyle_.getText();
+        text['textAlign'] = olStyle_.getTextAlign();
+        text['textBaseline'] = olStyle_.getTextBaseline();
+        text['rotateWithView'] = olStyle_.getRotateWithView();
+        text['textFill'] = this.getFill_(olStyle_);
+        text['textStroke'] = this.getStroke_(olStyle_);
       }
     }
-    return this.fixObject(text)
+    return this.fixObject(text);
   }
 
   /**
-   * 获取图像信息
-   * @param style
-   * @private
+   * 获取图像样式信息
+   * @param style 样式对象
+   * @returns 图像样式信息
    */
-  getImage_(style) {
-    let image = null
+  private getImage_(style: Style): Record<string, unknown> | null {
+    let image: Record<string, unknown> | null = null;
     if (style) {
-      let olStyle_ = style.getImage()
+      const olStyle_ = style.getImage();
       if (olStyle_) {
-        image = {}
+        image = {};
         if (olStyle_ instanceof Icon) {
-          image['type'] = 'icon'
-          image['image'] = {}
-          image['image']['imageAnchor'] = olStyle_.getAnchor()
-          image['image']['imageColor'] = olStyle_.getColor()
-          image['image']['imageSrc'] = olStyle_.getSrc()
-          image['image']['imgSize'] = olStyle_.getSize()
-          image['image']['scale'] = olStyle_.getScale()
-          image['image']['imageRotation'] = olStyle_.getRotation()
-          image['image']['rotateWithView'] = olStyle_.getRotateWithView()
-          image['image']['imageOpacity'] = olStyle_.getOpacity()
-          // TODO: 没有这个方法
-          // image['image']['snapToPixel'] = olStyle_.getSnapToPixel()
-          image['image']['offset'] = olStyle_.getOrigin()
+          image['type'] = 'icon';
+          image['image'] = {};
+          image['image']['imageAnchor'] = olStyle_.getAnchor();
+          image['image']['imageColor'] = olStyle_.getColor();
+          image['image']['imageSrc'] = olStyle_.getSrc();
+          image['image']['imgSize'] = olStyle_.getSize();
+          image['image']['scale'] = olStyle_.getScale();
+          image['image']['imageRotation'] = olStyle_.getRotation();
+          image['image']['rotateWithView'] = olStyle_.getRotateWithView();
+          image['image']['imageOpacity'] = olStyle_.getOpacity();
+          image['image']['offset'] = olStyle_.getOrigin();
         } else if (olStyle_ instanceof RegularShape) {
-          image['type'] = ''
-          image['image'] = {}
-          image['image']['fill'] = this.getFill_(olStyle_)
-          image['image']['points'] = olStyle_.getPoints()
-          image['image']['radius'] = olStyle_.getRadius()
-          image['image']['radius2'] = olStyle_.getRadius2()
-          image['image']['angle'] = olStyle_.getAngle()
-          image['image']['stroke'] = this.getStroke_(olStyle_)
-          image['image']['rotateWithView'] = olStyle_.getRotateWithView()
-          // image['image']['snapToPixel'] = olStyle_.getSnapToPixel()
+          image['type'] = 'regular';
+          image['image'] = {};
+          image['image']['fill'] = this.getFill_(olStyle_ as any);
+          image['image']['points'] = olStyle_.getPoints();
+          image['image']['radius'] = olStyle_.getRadius();
+          image['image']['radius2'] = olStyle_.getRadius2();
+          image['image']['angle'] = olStyle_.getAngle();
+          image['image']['stroke'] = this.getStroke_(olStyle_ as any);
+          image['image']['rotateWithView'] = olStyle_.getRotateWithView();
         }
       }
     }
-    return this.fixObject(image)
+    return this.fixObject(image);
   }
 
   /**
-   * 获取样式配置
-   * @param feature
+   * 获取样式代码
+   * @param feature 要素对象
+   * @returns 样式代码
    */
-  getStyleCode(feature: Feature) {
+  getStyleCode(feature: Feature): StyleCode | undefined {
     try {
       if (feature && feature instanceof Feature) {
-        let style = this.getBaseStyle(feature)
+        const style = this.getBaseStyle(feature);
         if (style && style instanceof Style) {
-          // 填充颜色
-          let fill = this.getFill_(style)
-          let [opacity, rgbaArray, backgroundColor] = [1, null, undefined]
+          const fill = this.getFill_(style);
+          let opacity = 1;
+          let backgroundColor: string | undefined;
           if (fill && fill['fillColor']) {
-            rgbaArray = asArray(fill['fillColor'])
-            opacity = parseFloat(rgbaArray[3])
+            const rgbaArray = asArray(fill['fillColor'] as string | number[]);
+            opacity = parseFloat(String(rgbaArray[3]));
             if (rgbaArray && typeof opacity === 'number') {
-              backgroundColor = this.handleBackgroundColor(asString(rgbaArray), opacity)
+              backgroundColor = this.handleBackgroundColor(asString(rgbaArray), opacity);
             }
           }
-          // 边框线条
-          let stroke = this.getStroke_(style)
-          // 文本信息
-          let text = this.getText_(style)
-          // 获取icon
-          let icon = this.getImage_(style)
+          const stroke = this.getStroke_(style);
+          const text = this.getText_(style);
+          const icon = this.getImage_(style);
           return {
             fill: {
               fillColor: backgroundColor,
               opacity: opacity
             },
-            stroke: stroke,
-            image: icon,
-            text: text
-          }
+            stroke: stroke || {},
+            image: icon || {},
+            text: text || {}
+          };
         }
       }
     } catch (e) {
-      console.warn(e)
+      console.warn(e);
     }
+    return undefined;
   }
 
   /**
-   * 移除图层上所有的数据
+   * 移除所有要素
    */
-  removeAllFeatures() {
-    const layer = getLayerByLayerName(this.map, this.layerName)
-    const overlays_ = this.map.getOverlays().getArray()
+  removeAllFeatures(): void {
+    const layer = getLayerByLayerName(this.map, this.layerName);
+    const overlays_ = this.map.getOverlays().getArray();
     if (layer) {
-      let source = layer.getSource()
-      source.clear()
+      const source = layer.getSource();
+      source.clear();
     }
     if (overlays_ && overlays_.length > 0) {
-      let len = overlays_.length
+      const len = overlays_.length;
       for (let i = 0; i < len; i++) {
         if (overlays_[i] && overlays_[i].get('isPlotText')) {
-          this.map.removeOverlay(overlays_[i])
-          i--
+          this.map.removeOverlay(overlays_[i]);
+          i--;
         }
       }
     }
   }
 
   /**
-   * 获取所有的要素包含样式信息的GeoJSON
+   * 获取所有要素
+   * @returns 要素数组
    */
-  getFeatures() {
-    let rFeatures = []
-    let layer = getLayerByLayerName(this.map, this.layerName)
+  getFeatures(): Record<string, unknown>[] {
+    const rFeatures: Record<string, unknown>[] = [];
+    const layer = getLayerByLayerName(this.map, this.layerName);
     if (layer) {
-      let source = layer.getSource()
+      const source = layer.getSource();
       if (source && source instanceof VectorSource) {
-        let features = source.getFeatures()
+        const features = source.getFeatures();
         if (features && features.length > 0) {
-          features.forEach((feature, index) => {
+          features.forEach((feature) => {
             if (feature && feature.getGeometry) {
-              let geom = feature.getGeometry()
-              debugger
-              // @ts-ignore
+              const geom = feature.getGeometry() as any;
               if (geom && geom.getCoordinates) {
-                let type = geom.getType()
-                // @ts-ignore
-                let coordinates = geom.getCoordinates()
+                const type = geom.getType();
+                const coordinates = geom.getCoordinates();
                 rFeatures.push({
                   'type': 'Feature',
                   'geometry': {
@@ -408,27 +449,23 @@ class PlotUtils {
                     'coordinates': coordinates
                   },
                   'properties': {
-                    // @ts-ignore
-                    'type': feature.getGeometry().getPlotType(),
+                    'type': feature.getGeometry()!.getPlotType(),
                     'style': this.getStyleCode(feature),
-                    // @ts-ignore
-                    'points': feature.getGeometry().getPoints()
+                    'points': feature.getGeometry()!.getPoints()
                   }
-                })
+                });
               }
             }
-          })
+          });
         }
       }
     }
-    const overlays_ = this.map.getOverlays().getArray()
-    // TODO: 有好几个方法是不是被废弃了，待验证
+    const overlays_ = this.map.getOverlays().getArray();
     overlays_.forEach((overlay: any) => {
       if (overlay.get('isPlotText')) {
-        debugger
-        const style_ = overlay.getStyle()
-        style_['width'] = overlay.getWidth() + 'px'
-        style_['height'] = overlay.getHeight() + 'px'
+        const style_ = overlay.getStyle();
+        style_['width'] = overlay.getWidth() + 'px';
+        style_['height'] = overlay.getHeight() + 'px';
         rFeatures.push({
           'type': 'Feature',
           'geometry': {
@@ -442,74 +479,74 @@ class PlotUtils {
             'style': style_,
             'value': overlay.getValue()
           }
-        })
+        });
       }
-    })
-    return rFeatures
+    });
+    return rFeatures;
   }
 
   /**
-   * 恢复相关标绘
-   * @param features
+   * 添加要素
+   * @param features 要素数组
    */
-  addFeatures(features) {
+  addFeatures(features: Record<string, unknown>[]): void {
     if (features && Array.isArray(features) && features.length > 0) {
-      let layer = getLayerByLayerName(this.map, this.layerName)
+      let layer = getLayerByLayerName(this.map, this.layerName);
       if (!layer) {
         layer = createVectorLayer(this.map, this.layerName, {
           create: true
-        })
-        layer.setZIndex(this.options['zIndex'] || 99)
+        });
+        layer!.setZIndex(this.options['zIndex'] as number || 99);
       }
       if (layer) {
-        let source = layer.getSource()
+        const source = layer.getSource();
         if (source && source instanceof VectorSource) {
-          const _extents = []
+          const _extents: number[][] = [];
           features.forEach(feature => {
-            if (feature && feature['geometry'] && feature['geometry']['type'] !== 'PlotText') {
-              if (feature['properties']['type'] && Geometry[feature['properties']['type']]) {
-                let feat = new Feature({
-                  geometry: (new Geometry[feature['properties']['type']]([], feature['properties']['points'], feature['properties']))
-                })
-                feat.set('isPlot', true)
-                _extents.push(feat.getGeometry().getExtent())
-                if (feature['properties']['style']) {
-
-                  let style_ = olStyleFactory(feature['properties']['style'])
+            if (feature && feature['geometry'] && (feature['geometry'] as Record<string, unknown>)['type'] !== 'PlotText') {
+              const plotType = (feature['properties'] as Record<string, unknown>)['type'] as string;
+              if (plotType && Geometry[plotType]) {
+                const feat = new Feature({
+                  geometry: (new (Geometry as any)[plotType]([], (feature['properties'] as Record<string, unknown>)['points'], feature['properties']))
+                });
+                feat.set('isPlot', true);
+                _extents.push(feat.getGeometry()!.getExtent());
+                if (feature['properties'] && (feature['properties'] as Record<string, unknown>)['style']) {
+                  const style_ = olStyleFactory((feature['properties'] as Record<string, unknown>)['style'] as Record<string, unknown>);
                   if (style_) {
-                    feat.setStyle(style_)
+                    feat.setStyle(style_);
                   }
                 }
-                source.addFeature(feat)
+                source.addFeature(feat);
               } else {
-                console.warn('不存在的标绘类型！')
+                console.warn('不存在的标绘类型！');
               }
-            } else if (feature && feature['geometry'] && feature['geometry']['type'] === 'PlotText') {
-              _extents.push((new Point(feature.geometry['coordinates'])).getExtent())
+            } else if (feature && feature['geometry'] && (feature['geometry'] as Record<string, unknown>)['type'] === 'PlotText') {
+              _extents.push((new Point(feature.geometry['coordinates'] as Coordinate)).getExtent());
               const _plotText = new PlotTextBox({
-                id: feature.properties.id,
-                position: feature.geometry['coordinates'],
-                width: feature.properties['width'],
-                height: feature.properties['height'],
-                value: feature.properties['value'],
-                style: feature.properties.style
-              })
+                id: (feature['properties'] as Record<string, unknown>).id as string,
+                position: feature.geometry['coordinates'] as Coordinate,
+                width: (feature['properties'] as Record<string, unknown>)['width'] as number,
+                height: (feature['properties'] as Record<string, unknown>)['height'] as number,
+                value: (feature['properties'] as Record<string, unknown>)['value'] as string,
+                style: ((feature['properties'] as Record<string, unknown>).style || {}) as Record<string, string>
+              });
               if (this.map && this.map instanceof Map && _plotText) {
-                this.map.addOverlay(_plotText)
+                this.map.addOverlay(_plotText);
               } else {
-                console.warn('未传入地图对象或者plotText创建失败！')
+                console.warn('未传入地图对象或者plotText创建失败！');
               }
             }
-          })
+          });
           if (this.options['zoomToExtent'] && _extents && _extents.length > 0) {
-            const _extent = this._getExtent(_extents)
-            const size = this.map.getSize()
-            const _view = this.map.getView()
+            const _extent = this._getExtent(_extents);
+            const size = this.map.getSize();
+            const _view = this.map.getView();
             _view.fit(_extent, {
               size: size,
               duration: 800,
               maxZoom: (_view.getMaxZoom() || undefined)
-            })
+            });
           }
         }
       }
@@ -517,34 +554,36 @@ class PlotUtils {
   }
 
   /**
-   * get extent
-   * @private
+   * 获取合并范围
+   * @param extents 范围数组
+   * @param params 范围参数
+   * @returns 合并后的范围
    */
-  _getExtent(extents, params = {}) {
+  private _getExtent(extents: number[][], params: ExtentParams = {}): number[] {
     const bbox = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY,
-    Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY]
-    let _extent = extents.reduce(function (prev, coord) {
+    Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
+    let _extent = extents.reduce(function (prev: number[], coord: number[]) {
       return [
         Math.min(coord[0], prev[0]),
         Math.min(coord[1], prev[1]),
         Math.max(coord[2], prev[2]),
         Math.max(coord[3], prev[3])
-      ]
-    }, bbox)
-    let size = getSize(_extent)
-    let adjust = typeof params['adjust'] === 'number' ? params['adjust'] : 0.2
-    let minWidth = typeof params['minWidth'] === 'number' ? params['minWidth'] : 0.05
-    let minHeight = typeof params['minHeight'] === 'number' ? params['minHeight'] : 0.05
+      ];
+    }, bbox);
+    const size = getSize(_extent);
+    const adjust = typeof params['adjust'] === 'number' ? params['adjust'] : 0.2;
+    const minWidth = typeof params['minWidth'] === 'number' ? params['minWidth'] : 0.05;
+    const minHeight = typeof params['minHeight'] === 'number' ? params['minHeight'] : 0.05;
     if (size[0] <= minWidth || size[1] <= minHeight) {
-      let bleft = getBottomLeft(_extent) // 获取xmin,ymin
-      let tright = getTopRight(_extent) // 获取xmax,ymax
-      let xmin = bleft[0] - adjust
-      let ymin = bleft[1] - adjust
-      let xmax = tright[0] + adjust
-      let ymax = tright[1] + adjust
-      _extent = buffer([xmin, ymin, xmax, ymax], adjust)
+      const bleft = getBottomLeft(_extent);
+      const tright = getTopRight(_extent);
+      const xmin = bleft[0] - adjust;
+      const ymin = bleft[1] - adjust;
+      const xmax = tright[0] + adjust;
+      const ymax = tright[1] + adjust;
+      _extent = buffer([xmin, ymin, xmax, ymax], adjust);
     }
-    return _extent
+    return _extent;
   }
 }
-export default PlotUtils
+export default PlotUtils;

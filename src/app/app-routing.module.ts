@@ -9,7 +9,7 @@ import { XzqhComponent } from './components/xzqh/xzqh.component';
 import { AreaMapComponent } from './components/area-map/area-map.component';
 import { SvgMapComponent } from './components/svg-map/svg-map.component';
 import { PlotUtilComponent } from './components/plot-util/plot-util.component';
-import { XzqhOfflineComponent } from './xzqh-offline/xzqh-offline.component';
+import { XzqhOfflineComponent } from './components/xzqh-offline/xzqh-offline.component';
 
 const routes: Routes = [
   { path: 'bd-map', component: OlBdMapComponent },

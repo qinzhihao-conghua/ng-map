@@ -1,142 +1,158 @@
 /**
  * Created by FDD on 2017/5/22.
- * @desc 标绘画圆算法，继承面要素相关方法和属性
+ * @desc 标绘画椭圆算法，继承面要素相关方法和属性
  */
-import { Map } from 'ol'
-import { Polygon } from 'ol/geom'
+import { Map } from 'ol';
+import { Polygon } from 'ol/geom';
+import { ELLIPSE } from '../../Utils/PlotTypes';
+import * as Constants from '../../Constants';
+import * as PlotUtils from '../../Utils/utils';
+import { Coordinate } from 'ol/coordinate';
 
-import { ELLIPSE } from '../../Utils/PlotTypes'
-import * as Constants from '../../Constants'
-import * as PlotUtils from '../../Utils/utils'
 class Ellipse extends Polygon {
-  constructor(coordinates, points, params) {
-    super([])
-    this.type = ELLIPSE
-    this.fixPointCount = 2
-    this.set('params', params)
+  type: string;
+  points: Coordinate[];
+  map: Map | undefined;
+  fixPointCount: number;
+  options: Record<string, unknown>;
+
+  constructor(coordinates: Coordinate[] | undefined, points: Coordinate[] | undefined, params: Record<string, unknown> | undefined) {
+    super([]);
+    this.type = ELLIPSE;
+    this.fixPointCount = 2;
+    this.options = params || {};
+    this.points = [];
+    this.set('params', this.options);
     if (points && points.length > 0) {
-      this.setPoints(points)
+      this.setPoints(points);
     } else if (coordinates && coordinates.length > 0) {
-      this.setCoordinates(coordinates)
+      this.setCoordinates(coordinates as any);
     }
   }
-  type: string;
-  points: Array<any> = [];
-  map: Map;
-  fixPointCount: number;
+
   /**
    * 获取标绘类型
+   * @returns 标绘类型
    */
-  getPlotType() {
-    return this.type
+  getPlotType(): string {
+    return this.type;
   }
 
-  generate() {
+  /**
+   * 生成椭圆图形
+   */
+  generate(): void {
     if (this.getPointCount() < 2) {
-      return false
+      return;
     } else {
-      let [pnt1, pnt2] = [this.points[0], this.points[1]]
-      let center = PlotUtils.Mid(pnt1, pnt2)
-      let majorRadius = Math.abs((pnt1[0] - pnt2[0]) / 2)
-      let minorRadius = Math.abs((pnt1[1] - pnt2[1]) / 2)
-      let res = this.generatePoints(center, majorRadius, minorRadius)
-      this.setCoordinates([res])
+      const pnt1 = this.points[0];
+      const pnt2 = this.points[1];
+      const center = PlotUtils.Mid(pnt1, pnt2);
+      const majorRadius = Math.abs((pnt1[0] - pnt2[0]) / 2);
+      const minorRadius = Math.abs((pnt1[1] - pnt2[1]) / 2);
+      const res = this.generatePoints(center, majorRadius, minorRadius);
+      this.setCoordinates([res]);
     }
   }
 
   /**
-   * 对圆边线进行插值
-   * @param center
-   * @param majorRadius
-   * @param minorRadius
+   * 生成椭圆的点集合
+   * @param center 椭圆中心坐标
+   * @param majorRadius 长半轴半径
+   * @param minorRadius 短半轴半径
+   * @returns 点坐标数组
    */
-  generatePoints(center, majorRadius, minorRadius) {
-    let [x, y, angle, points] = [null, null, null, []]
+  generatePoints(center: Coordinate, majorRadius: number, minorRadius: number): Coordinate[] {
+    const points: Coordinate[] = [];
     for (let i = 0; i <= Constants.FITTING_COUNT; i++) {
-      angle = Math.PI * 2 * i / Constants.FITTING_COUNT
-      x = center[0] + majorRadius * Math.cos(angle)
-      y = center[1] + minorRadius * Math.sin(angle)
-      points.push([x, y])
+      const angle = Math.PI * 2 * i / Constants.FITTING_COUNT;
+      const x = center[0] + majorRadius * Math.cos(angle);
+      const y = center[1] + minorRadius * Math.sin(angle);
+      points.push([x, y]);
     }
-    return points
+    return points;
   }
 
   /**
    * 设置地图对象
-   * @param map
+   * @param map 地图对象
    */
-  setMap(map: Map) {
+  setMap(map: Map): void {
     if (map && map instanceof Map) {
-      this.map = map
+      this.map = map;
     } else {
-      throw new Error('传入的不是地图对象！')
+      throw new Error('传入的不是地图对象！');
     }
   }
 
   /**
-   * 获取当前地图对象
+   * 获取地图对象
+   * @returns 地图对象
    */
-  getMap() {
-    return this.map
+  getMap(): Map | undefined {
+    return this.map;
   }
 
   /**
-   * 判断是否是Plot
+   * 判断是否为标绘对象
+   * @returns 是否为标绘对象
    */
-  isPlot() {
-    return true
+  isPlot(): boolean {
+    return true;
   }
 
   /**
-   * 设置坐标点
-   * @param value
+   * 设置控制点
+   * @param value 控制点数组
    */
-  setPoints(value) {
-    this.points = !value ? [] : value
+  setPoints(value: Coordinate[]): void {
+    this.points = !value ? [] : value;
     if (this.points.length >= 1) {
-      this.generate()
+      this.generate();
     }
   }
 
   /**
-   * 获取坐标点
+   * 获取控制点
+   * @returns 控制点数组
    */
-  getPoints() {
-    return this.points.slice(0)
+  getPoints(): Coordinate[] {
+    return this.points.slice(0);
   }
 
   /**
-   * 获取点数量
+   * 获取控制点数量
+   * @returns 控制点数量
    */
-  getPointCount() {
-    return this.points.length
+  getPointCount(): number {
+    return this.points.length;
   }
 
   /**
-   * 更新当前坐标
-   * @param point
-   * @param index
+   * 更新指定索引的控制点
+   * @param point 新的控制点
+   * @param index 控制点索引
    */
-  updatePoint(point, index) {
+  updatePoint(point: Coordinate, index: number): void {
     if (index >= 0 && index < this.points.length) {
-      this.points[index] = point
-      this.generate()
+      this.points[index] = point;
+      this.generate();
     }
   }
 
   /**
-   * 更新最后一个坐标
-   * @param point
+   * 更新最后一个控制点
+   * @param point 新的控制点
    */
-  updateLastPoint(point) {
-    this.updatePoint(point, this.points.length - 1)
+  updateLastPoint(point: Coordinate): void {
+    this.updatePoint(point, this.points.length - 1);
   }
 
   /**
-   * 结束绘制
+   * 完成绘制
    */
-  finishDrawing() {
+  finishDrawing(): void {
   }
 }
 
-export default Ellipse
+export default Ellipse;

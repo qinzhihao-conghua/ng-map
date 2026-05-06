@@ -1,19 +1,43 @@
-import { Map, Overlay } from 'ol'
-import { DragPan as $DragPan } from 'ol/interaction'
-import autosize from 'autosize'
-import { DEF_TEXT_STYEL } from '../../Constants'
-import { merge, bindAll } from '../../Utils/utils'
-import { on, off, hasClass, setStyle, getStyle } from '../../Utils/domUtils'
+import { Map, Overlay } from 'ol';
+import { DragPan as $DragPan } from 'ol/interaction';
+import autosize from 'autosize';
+import { DEF_TEXT_STYLE } from '../../Constants';
+import { merge, bindAll } from '../../Utils/utils';
+import { on, off, hasClass, setStyle, getStyle } from '../../Utils/domUtils';
+import { Coordinate } from 'ol/coordinate';
+
+interface PlotTextBoxOptions {
+  id?: string;
+  element?: HTMLElement;
+  offset?: number[];
+  stopEvent?: boolean;
+  positioning?: string;
+  insertFirst?: boolean;
+  autoPan?: boolean;
+  autoPanAnimation?: Record<string, unknown>;
+  autoPanMargin?: number;
+  className?: string;
+  position?: Coordinate;
+  width?: number;
+  height?: number;
+  minHeight?: number;
+  value?: string;
+  style?: Record<string, string>;
+  [key: string]: unknown;
+}
 
 class PlotTextBox extends Overlay {
-  constructor(options = {}) {
-    // const [id, element, offset, stopEvent, positioning, insertFirst,
-    //   autoPan, autoPanAnimation, autoPanMargin, className] = [
-    //     options['id'], options['element'], options['offset'], options['stopEvent'],
-    //     options['positioning'], options['insertFirst'], options['autoPan'],
-    //     options['autoPanAnimation'], options['autoPanMargin'],
-    //     (options['className'] ? options['className'] : 'ol-plot-text-editor')
-    //   ]
+  private mapDragPan: $DragPan | undefined;
+  private isClick_: boolean;
+  private dragging_: boolean;
+  private isFocus_: boolean;
+  private options_: PlotTextBoxOptions;
+  private _position: Coordinate;
+  private handleTimer_: number | null;
+  private currentPixel_: number[];
+  private preCursor_: string | undefined;
+
+  constructor(options: PlotTextBoxOptions = {}) {
     super({
       id: options['id'],
       element: options['element'],
@@ -23,56 +47,19 @@ class PlotTextBox extends Overlay {
       autoPanAnimation: options['autoPanAnimation'],
       autoPanMargin: options['autoPanMargin'],
       className: options['className']
-    })
-    this.setOffset(options['offset'] !== undefined ? options['offset'] : [0, 0])
-    this.setPositioning(options['positioning'] !== undefined ? options['positioning'] : 'center-center')
+    });
+    this.setOffset(options['offset'] !== undefined ? options['offset'] : [0, 0]);
+    this.setPositioning((options['positioning'] || 'center-center') as any);
 
-    /**
-     * 地图交互
-     */
-    this.mapDragPan = undefined
-
-    /**
-     * is click
-     * @private
-     */
-    this.isClick_ = false
-
-    /**
-     * 是否处于拖拽状态
-     * @private
-     */
-    this.dragging_ = false
-
-    /**
-     * 当前气泡是否获取焦点
-     * @private
-     */
-    this.isFocus_ = false
-
-    /**
-     * 当前配置信息
-     * @private
-     */
-    this.options_ = options
-
-    /**
-     * 当前气泡位置
-     * @private
-     */
-    this._position = (options['position'] && options['position'].length > 0) ? options['position'] : []
-
-    /**
-     * 防抖延时
-     * @private
-     */
-    this.handleTimer_ = null
-
-    /**
-     * 每次鼠标按下的位置
-     * @private
-     */
-    this.currentPixel_ = []
+    this.mapDragPan = undefined;
+    this.isClick_ = false;
+    this.dragging_ = false;
+    this.isFocus_ = false;
+    this.options_ = options;
+    this._position = (options['position'] && options['position'].length > 0) ? options['position'] as Coordinate : [];
+    this.handleTimer_ = null;
+    this.currentPixel_ = [];
+    this.preCursor_ = undefined;
 
     bindAll([
       'handleFocus_',
@@ -86,429 +73,274 @@ class PlotTextBox extends Overlay {
       'handleResizeMouseMove_',
       'handleResizeMouseUp_',
       'resizeButtonMoveHandler_'
-    ], this)
+    ], this);
 
-    /**
-     * 创建text content
-     */
-    this.createTextContent(options)
-  }
-  /**
-     * 地图交互
-     */
-  mapDragPan
-
-  /**
-   * is click
-   * @private
-   */
-  isClick_ = false
-
-  /**
-   * 是否处于拖拽状态
-   * @private
-   */
-  dragging_ = false
-
-  /**
-   * 当前气泡是否获取焦点
-   * @private
-   */
-  isFocus_ = false
-
-  /**
-   * 当前配置信息
-   * @private
-   */
-  options_;
-
-  /**
-   * 当前气泡位置
-   * @private
-   */
-  _position;
-
-  /**
-   * 防抖延时
-   * @private
-   */
-  handleTimer_ = null
-
-  /**
-   * 每次鼠标按下的位置
-   * @private
-   */
-  currentPixel_ = [];
-  /**鼠标样式 */
-  preCursor_;
-
-  /**
-   * 创建文本框父容器
-   * @param options
-   */
-  createTextContent(options) {
-    const _className = options.className || 'ol-plot-text-editor'
-    const content = document.createElement('textarea')
-    content.className = _className
-    content.style.width = options['width'] + 'px'
-    content.style.height = options['height'] + 'px'
-    content.style.minHeight = options['minHeight'] + 'px'
-    content.setAttribute('id', options['id'])
-    content.setAttribute('autofocus', (true as any))
-    autosize(content)
-    on(content, 'focus', this.handleFocus_)
-    on(content, 'blur', this.handleBlur_)
-    on(content, 'click', this.handleClick_)
-    on(content, 'mousedown', this.handleDragStart_)
-    on(window, 'mouseup', this.handleDragEnd_)
-    this.set('isPlotText', true)
-    this.setElement(content)
-    this.createCloseButton(options)
-    this.createResizeButton(options)
-    this.setPosition(this._position)
-    // this.dispatchEvent('textBoxDrawEnd', {
-    //   overlay: this,
-    //   element: content,
-    //   uuid: options['id']
-    // })
-    this.dispatchEvent('textBoxDrawEnd')
+    this.createTextContent(options);
   }
 
-  /**
-   * 获取文本框
-   * @private
-   */
-  getTextAreaFromContent_() {
-    let _node: HTMLTextAreaElement = null;
-    const childrens_ = Array.prototype.slice.call((this.element && this.element.children), 0)
+  private createTextContent(options: PlotTextBoxOptions): void {
+    const _className = options.className || 'ol-plot-text-editor';
+    const content = document.createElement('textarea');
+    content.className = _className;
+    content.style.width = options['width'] + 'px';
+    content.style.height = options['height'] + 'px';
+    content.style.minHeight = (options['minHeight'] || '') + 'px';
+    content.setAttribute('id', options['id']!);
+    content.setAttribute('autofocus', 'true');
+    autosize(content);
+    on(content, 'focus', this.handleFocus_);
+    on(content, 'blur', this.handleBlur_);
+    on(content, 'click', this.handleClick_);
+    on(content, 'mousedown', this.handleDragStart_);
+    on(window as unknown as Element, 'mouseup', this.handleDragEnd_);
+    this.set('isPlotText', true);
+    this.setElement(content);
+    this.createCloseButton(options);
+    this.createResizeButton(options);
+    this.setPosition(this._position);
+    this.dispatchEvent('textBoxDrawEnd');
+  }
+
+  private getTextAreaFromContent_(): HTMLTextAreaElement | null {
+    let _node: HTMLTextAreaElement | null = null;
+    const childrens_ = Array.prototype.slice.call((this.element && this.element.children), 0);
     if (childrens_.length > 0) {
-      childrens_.every(ele => {
+      childrens_.every((ele: Element) => {
         if (ele.nodeType === 1 && ele.nodeName.toLowerCase() === 'textarea') {
-          _node = ele
-          return false
+          _node = ele as HTMLTextAreaElement;
+          return false;
         } else {
-          return true
+          return true;
         }
-      })
+      });
     }
-    return _node
+    return _node;
   }
 
-  /**
-   * 创建关闭按钮
-   * @param options
-   */
-  createCloseButton(options) {
-    const _closeSpan = document.createElement('span')
-    _closeSpan.className = 'ol-plot-text-editor-close'
-    _closeSpan.setAttribute('data-id', options['id'])
-    off(_closeSpan, 'click', this.closeCurrentPlotText)
-    on(_closeSpan, 'click', this.closeCurrentPlotText)
-    this.element.appendChild(_closeSpan)
+  private createCloseButton(options: PlotTextBoxOptions): void {
+    const _closeSpan = document.createElement('span');
+    _closeSpan.className = 'ol-plot-text-editor-close';
+    _closeSpan.setAttribute('data-id', options['id']!);
+    off(_closeSpan, 'click', this.closeCurrentPlotText);
+    on(_closeSpan, 'click', this.closeCurrentPlotText);
+    this.element!.appendChild(_closeSpan);
   }
 
-  /**
-   * 创建文本框大小调整按钮
-   * @param options
-   */
-  createResizeButton(options) {
-    const _resizeSpan = document.createElement('span')
-    _resizeSpan.className = 'ol-plot-text-editor-resize'
-    _resizeSpan.setAttribute('data-id', options['id'])
-    off(_resizeSpan, 'mousedown', this.handleResizeMouseDown_)
-    off(_resizeSpan, 'mousemove', this.handleResizeMouseMove_)
-    on(_resizeSpan, 'mousedown', this.handleResizeMouseDown_)
-    on(_resizeSpan, 'mousemove', this.handleResizeMouseMove_)
-    this.element.appendChild(_resizeSpan)
+  private createResizeButton(options: PlotTextBoxOptions): void {
+    const _resizeSpan = document.createElement('span');
+    _resizeSpan.className = 'ol-plot-text-editor-resize';
+    _resizeSpan.setAttribute('data-id', options['id']!);
+    off(_resizeSpan, 'mousedown', this.handleResizeMouseDown_);
+    off(_resizeSpan, 'mousemove', this.handleResizeMouseMove_);
+    on(_resizeSpan, 'mousedown', this.handleResizeMouseDown_);
+    on(_resizeSpan, 'mousemove', this.handleResizeMouseMove_);
+    this.element!.appendChild(_resizeSpan);
   }
 
-  /**
-   * 调整大小
-   * @param event
-   * @private
-   */
-  resizeButtonMoveHandler_(event) {
-    const pixel_ = event.pixel
-    const element_ = this.getTextAreaFromContent_()
-    if (pixel_.length < 1 || this.currentPixel_.length < 1 || !element_) return
-    const _offset = [pixel_[0] - this.currentPixel_[0], pixel_[1] - this.currentPixel_[1]]
-    const _size = [element_.offsetWidth, element_.offsetHeight]
-    const _width = _size[0] + _offset[0] * 2
-    const _height = _size[1] + _offset[1] * 2
-    setStyle(element_, 'width', _width + 'px')
-    setStyle(element_, 'height', _height + 'px')
-    this.currentPixel_ = pixel_
-    this.getMap().render()
+  private resizeButtonMoveHandler_(event: { pixel: number[] }): void {
+    const pixel_ = event.pixel;
+    const element_ = this.getTextAreaFromContent_();
+    if (pixel_.length < 1 || this.currentPixel_.length < 1 || !element_) return;
+    const _offset = [pixel_[0] - this.currentPixel_[0], pixel_[1] - this.currentPixel_[1]];
+    const _size = [element_.offsetWidth, element_.offsetHeight];
+    const _width = _size[0] + _offset[0] * 2;
+    const _height = _size[1] + _offset[1] * 2;
+    setStyle(element_, 'width', _width + 'px');
+    setStyle(element_, 'height', _height + 'px');
+    this.currentPixel_ = pixel_;
+    this.getMap()!.render();
   }
 
-  /**
-   * 处理移动事件
-   * @param event
-   * @private
-   */
-  handleResizeMouseMove_(event) {
-    event.stopImmediatePropagation()
+  private handleResizeMouseMove_(event: MouseEvent): void {
+    event.stopImmediatePropagation();
   }
 
-  /**
-   * 处理鼠标按下事件
-   * @param event
-   * @private
-   */
-  handleResizeMouseDown_(event) {
-    if (!this.getMap()) return
-    this.currentPixel_ = [event.x, event.y]
-    this.getMap().on('pointermove', this.resizeButtonMoveHandler_)
-    on(this.getMap().getViewport(), 'mouseup', this.handleResizeMouseUp_)
+  private handleResizeMouseDown_(event: MouseEvent): void {
+    if (!this.getMap()) return;
+    this.currentPixel_ = [event.clientX, event.clientY];
+    this.getMap()!.on('pointermove', this.resizeButtonMoveHandler_);
+    on(this.getMap()!.getViewport(), 'mouseup', this.handleResizeMouseUp_);
   }
 
-  /**
-   * 处理鼠标抬起事件，移除所有事件监听
-   * @param event
-   * @private
-   */
-  handleResizeMouseUp_(event) {
-    if (!this.getMap()) return
-    this.getMap().un('pointermove', this.resizeButtonMoveHandler_)
-    off(this.getMap().getViewport(), 'mouseup', this.handleResizeMouseUp_)
-    this.currentPixel_ = []
+  private handleResizeMouseUp_(_event: MouseEvent): void {
+    if (!this.getMap()) return;
+    this.getMap()!.un('pointermove', this.resizeButtonMoveHandler_);
+    off(this.getMap()!.getViewport(), 'mouseup', this.handleResizeMouseUp_);
+    this.currentPixel_ = [];
   }
 
-  /**
-   * 处理关闭事件
-   * @param event
-   */
-  closeCurrentPlotText(event) {
-    if (!this.getMap()) return
-    if (event && hasClass(event.target, 'ol-plot-text-editor-close')) {
-      let _id = event.target.getAttribute('data-id')
+  closeCurrentPlotText(event: MouseEvent): void {
+    if (!this.getMap()) return;
+    if (event && hasClass(event.target as HTMLElement, 'ol-plot-text-editor-close')) {
+      const _id = (event.target as HTMLElement).getAttribute('data-id');
       if (_id) {
-        const _overlay = this.getMap().getOverlayById(_id)
+        const _overlay = this.getMap()!.getOverlayById(_id);
         if (_overlay) {
-          this.getMap().removeOverlay(_overlay)
+          this.getMap()!.removeOverlay(_overlay);
         }
       }
     }
   }
 
-  /**
-   * 处理获取焦点事件
-   * @private
-   */
-  handleFocus_() {
-    this.isFocus_ = true
+  private handleFocus_(): void {
+    this.isFocus_ = true;
     if (this.getMap()) {
-      this.getMap().set('activeTextArea', this)
-      this.getMap().dispatchEvent('activeTextArea')
+      this.getMap()!.set('activeTextArea', this);
+      this.getMap()!.dispatchEvent('activeTextArea');
     }
   }
 
-  /**
-   * 处理失去焦点事件
-   * @private
-   */
-  handleBlur_() {
-    this.isFocus_ = false
+  private handleBlur_(): void {
+    this.isFocus_ = false;
     if (this.getMap()) {
-      this.getMap().set('activeTextArea', null)
-      this.getMap().set('disActiveTextArea', this)
-      this.getMap().dispatchEvent('disActiveTextArea')
+      this.getMap()!.set('activeTextArea', null);
+      this.getMap()!.set('disActiveTextArea', this);
+      this.getMap()!.dispatchEvent('disActiveTextArea');
     }
   }
 
-  /**
-   * 处理拖拽开始
-   * @private
-   */
-  handleDragStart_(event) {
-    if (!this.getMap()) return
+  private handleDragStart_(_event: MouseEvent): void {
+    if (!this.getMap()) return;
     if (!this.dragging_ && this.isMoveModel() && this.isFocus_) {
       this.handleTimer_ = window.setTimeout(() => {
-        window.clearTimeout(this.handleTimer_)
-        this.handleTimer_ = null
+        window.clearTimeout(this.handleTimer_!);
+        this.handleTimer_ = null;
         if (!this.isClick_) {
-          this.dragging_ = true
-          this.disableMapDragPan()
-          this.preCursor_ = this.element.style.cursor
-          on(this.getMap().getViewport(), 'mousemove', this.handleDragDrag_)
-          on(this.element, 'mouseup', this.handleDragEnd_)
+          this.dragging_ = true;
+          this.disableMapDragPan();
+          this.preCursor_ = this.element!.style.cursor;
+          on(this.getMap()!.getViewport(), 'mousemove', this.handleDragDrag_);
+          on(this.element!, 'mouseup', this.handleDragEnd_);
         }
-      }, 300)
+      }, 300);
     }
   }
 
-  /**
-   * 处理拖拽
-   * @param event
-   * @private
-   */
-  handleDragDrag_(event) {
+  private handleDragDrag_(event: MouseEvent): void {
     if (this.dragging_) {
-      this.element.style.cursor = 'move'
-      this._position = this.getMap().getCoordinateFromPixel([event.clientX, event.clientY])
-      this.setPosition(this._position)
+      this.element!.style.cursor = 'move';
+      this._position = this.getMap()!.getCoordinateFromPixel([event.clientX, event.clientY]) as Coordinate;
+      this.setPosition(this._position);
     }
   }
 
-  /**
-   * 处理拖拽
-   * @private
-   */
-  handleDragEnd_(event) {
-    this.isClick_ = false
-    window.clearTimeout(this.handleTimer_)
-    this.handleTimer_ = null
+  private handleDragEnd_(_event: MouseEvent): void {
+    this.isClick_ = false;
+    window.clearTimeout(this.handleTimer_!);
+    this.handleTimer_ = null;
     if (this.dragging_ && this.isFocus_) {
-      this.dragging_ = false
-      this.enableMapDragPan()
-      this.element.style.cursor = this.preCursor_
-      off(this.getMap().getViewport(), 'mousemove', this.handleDragDrag_)
-      off(this.element, 'mouseup', this.handleDragEnd_)
+      this.dragging_ = false;
+      this.enableMapDragPan();
+      this.element!.style.cursor = this.preCursor_!;
+      off(this.getMap()!.getViewport(), 'mousemove', this.handleDragDrag_);
+      off(this.element!, 'mouseup', this.handleDragEnd_);
     }
   }
 
-  /**
-   * 处理点击事件
-   * @param event
-   * @private
-   */
-  handleClick_(event) {
+  private handleClick_(event: MouseEvent): void {
     if (event.target === this.element) {
-      this.isClick_ = true
+      this.isClick_ = true;
     } else {
-      this.isClick_ = false
+      this.isClick_ = false;
     }
   }
 
-  /**
-   * 是否处于选择模式
-   */
-  isMoveModel() {
-    const range = window.getSelection().getRangeAt(0)
-    return range.collapsed
+  isMoveModel(): boolean {
+    const range = window.getSelection()!.getRangeAt(0);
+    return range.collapsed;
   }
 
-  /**
-   * 设置样式
-   * @param style
-   */
-  setStyle(style = {}) {
-    const _element = this.getTextAreaFromContent_()
+  setStyle(style: Record<string, string> = {}): void {
+    const _element = this.getTextAreaFromContent_();
     if (_element) {
-      for (let key in style) {
+      for (const key in style) {
         if (style[key]) {
-          setStyle(_element, key, style[key])
+          setStyle(_element, key, style[key]);
         }
       }
     }
   }
 
-  /**
-   * 获取当前样式
-   */
-  getStyle() {
-    const _style = {}
-    const _element = this.getTextAreaFromContent_()
+  getStyle(): Record<string, string | null> {
+    const _style: Record<string, string | null> = {};
+    const _element = this.getTextAreaFromContent_();
     if (_element) {
-      for (let key in DEF_TEXT_STYEL) {
-        _style[key] = getStyle(_element, key)
+      for (const key in DEF_TEXT_STYLE) {
+        _style[key] = getStyle(_element, key);
       }
     }
-    return _style
+    return _style;
   }
 
-  /**
-   * set value
-   * @param value
-   */
-  setValue(value) {
-    const _element = this.getTextAreaFromContent_()
+  setValue(value: string): void {
+    const _element = this.getTextAreaFromContent_();
     if (_element) {
-      _element.value = value
+      _element.value = value;
       if (value) {
-        autosize.update(_element)
+        autosize.update(_element);
       }
-      this.getMap().render()
+      this.getMap()!.render();
     }
   }
 
-  /**
-   * get value
-   */
-  getValue() {
-    const _element = this.getTextAreaFromContent_()
+  getValue(): string {
+    const _element = this.getTextAreaFromContent_();
     if (_element) {
-      return _element.value
+      return _element.value;
     } else {
-      return ''
+      return '';
     }
   }
 
-  /**
-   * 获取宽度
-   */
-  getWidth() {
-    const element_ = this.getTextAreaFromContent_()
+  getWidth(): number {
+    const element_ = this.getTextAreaFromContent_();
     if (element_ && element_.offsetWidth) {
-      return element_.offsetWidth
+      return element_.offsetWidth;
     } else {
-      return 0
+      return 0;
     }
   }
 
-  /**
-   * 获取高度
-   */
-  getHeight() {
-    const element_ = this.getTextAreaFromContent_()
+  getHeight(): number {
+    const element_ = this.getTextAreaFromContent_();
     if (element_ && element_.offsetHeight) {
-      return element_.offsetHeight
+      return element_.offsetHeight;
     } else {
-      return 0
+      return 0;
     }
   }
 
-  /**
-   * 激活地图的拖拽平移
-   */
-  enableMapDragPan() {
-    const _map = this.getMap()
-    if (!_map) return
+  enableMapDragPan(): void {
+    const _map = this.getMap();
+    if (!_map) return;
     if (this.mapDragPan && this.mapDragPan instanceof $DragPan) {
-      _map.addInteraction(this.mapDragPan)
-      delete this.mapDragPan
+      _map.addInteraction(this.mapDragPan);
+      delete this.mapDragPan;
     }
   }
 
-  /**
-   * 禁止地图的拖拽平移
-   */
-  disableMapDragPan() {
-    const _map = this.getMap()
-    if (!_map) return
-    let interactions = _map.getInteractions().getArray()
+  disableMapDragPan(): void {
+    const _map = this.getMap();
+    if (!_map) return;
+    const interactions = _map.getInteractions().getArray();
     interactions.every(item => {
       if (item instanceof $DragPan) {
-        this.mapDragPan = item
-        _map.removeInteraction(item)
-        return false
+        this.mapDragPan = item;
+        _map.removeInteraction(item);
+        return false;
       } else {
-        return true
+        return true;
       }
-    })
+    });
   }
 
-  /**
-   * set map
-   * @param map
-   */
-  setMap(map: Map) {
-    super.setMap(map)
+  setMap(map: Map): void {
+    super.setMap(map);
     if (map && map instanceof Map) {
-      this.setStyle(merge(DEF_TEXT_STYEL, this.options_['style']))
-      this.setValue(this.options_['value'])
+      this.setStyle(merge(DEF_TEXT_STYLE as Record<string, unknown>, this.options_['style'] as Record<string, unknown>) as Record<string, string>);
+      this.setValue(this.options_['value'] as string || '');
     }
   }
 }
 
-export default PlotTextBox
+export default PlotTextBox;
